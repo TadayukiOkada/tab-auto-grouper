@@ -1,0 +1,179 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  background: Canvas;
+  color: CanvasText;
+  margin: 0;
+}
+
+main {
+  margin: 0 auto;
+  max-width: 920px;
+  padding: 28px;
+}
+
+h1 {
+  font-size: 24px;
+  margin: 0 0 22px;
+}
+
+h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+section {
+  border-top: 1px solid color-mix(in srgb, CanvasText 16%, Canvas);
+  padding: 18px 0;
+}
+
+label {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+select,
+textarea,
+button {
+  border: 1px solid color-mix(in srgb, CanvasText 22%, Canvas);
+  border-radius: 8px;
+  font: inherit;
+}
+
+select {
+  background: Canvas;
+  color: CanvasText;
+  padding: 7px 8px;
+}
+
+textarea {
+  box-sizing: border-box;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  height: 420px;
+  line-height: 1.45;
+  padding: 12px;
+  resize: vertical;
+  width: 100%;
+}
+
+button {
+  background: color-mix(in srgb, CanvasText 7%, Canvas);
+  color: CanvasText;
+  cursor: pointer;
+  padding: 8px 12px;
+}
+
+button:hover {
+  background: color-mix(in srgb, CanvasText 12%, Canvas);
+}
+
+.primary {
+  background: #1a73e8;
+  border-color: #1a73e8;
+  color: white;
+}
+
+.primary:hover {
+  background: #1765cc;
+}
+
+.hint {
+  color: color-mix(in srgb, CanvasText 68%, Canvas);
+  font-size: 13px;
+  margin: 0 0 10px;
+}
+
+footer {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+#status {
+  color: color-mix(in srgb, CanvasText 72%, Canvas);
+  font-size: 13px;
+}
+
+/* --- Rule editor cards --- */
+
+#rulesContainer {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.rule-card {
+  border: 1px solid color-mix(in srgb, CanvasText 16%, Canvas);
+  border-radius: 10px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.rule-header {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.rule-field {
+  align-items: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+
+.rule-field > span {
+  color: color-mix(in srgb, CanvasText 68%, Canvas);
+  font-size: 12px;
+}
+
+.rule-field input[type="text"] {
+  background: Canvas;
+  border: 1px solid color-mix(in srgb, CanvasText 22%, Canvas);
+  border-radius: 8px;
+  color: CanvasText;
+  font: inherit;
+  padding: 7px 9px;
+}
+
+.rule-name {
+  flex: 1 1 220px;
+}
+
+.rule-color {
+  flex: 0 0 auto;
+}
+
+.rule-controls {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.rule-controls button {
+  padding: 7px 10px;
+}
+
+.danger {
+  border-color: color-mix(in srgb, #b3261e 55%, Canvas);
+  color: #b3261e;
+}
+
+.danger:hover {
+  background: color-mix(in srgb, #b3261e 12%, Canvas);
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+}

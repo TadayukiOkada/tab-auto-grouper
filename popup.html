@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tab Auto Grouper</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Tab Auto Grouper</h1>
+        <button id="optionsButton" title="Open settings">Settings</button>
+      </header>
+
+      <section class="actions" aria-label="Actions">
+        <button id="groupButton" class="primary">Group tabs</button>
+        <button id="sortButton">Sort active window</button>
+        <button id="dedupeButton">Close duplicates</button>
+      </section>
+
+      <section class="summary" aria-live="polite">
+        <div id="summaryText">Loading tabs...</div>
+        <div id="counts"></div>
+      </section>
+
+      <p id="status" role="status"></p>
+    </main>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

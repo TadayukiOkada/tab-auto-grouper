@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tab Auto Grouper Settings</title>
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Tab Auto Grouper Settings</h1>
+      </header>
+
+      <section>
+        <h2>Behavior</h2>
+        <label>
+          <input type="checkbox" id="activeWindowOnly">
+          Group only the active window
+        </label>
+        <label>
+          <input type="checkbox" id="collapseGroups">
+          Collapse groups after creating them
+        </label>
+        <label>
+          <input type="checkbox" id="sortAfterGrouping">
+          Sort tabs after grouping
+        </label>
+        <label>
+          <input type="checkbox" id="skipPinnedTabs">
+          Leave pinned tabs untouched
+        </label>
+        <label>
+          Group position when sorting
+          <select id="groupPosition">
+            <option value="left">Left side</option>
+            <option value="right">Right side</option>
+          </select>
+        </label>
+      </section>
+
+      <section>
+        <h2>Duplicate Tabs</h2>
+        <label>
+          Scope
+          <select id="closeDuplicateScope">
+            <option value="allWindows">All windows</option>
+            <option value="activeWindow">Active window only</option>
+          </select>
+        </label>
+        <label>
+          Match
+          <select id="duplicateMatch">
+            <option value="withoutHash">Same URL, ignoring #fragment</option>
+            <option value="exact">Exact URL</option>
+            <option value="withoutHashOrQuery">Same page, ignoring query and #fragment</option>
+          </select>
+        </label>
+      </section>
+
+      <section>
+        <h2>Rules</h2>
+        <p class="hint">
+          Rules are evaluated from top to bottom. Domains match both the exact domain and subdomains.
+          Separate multiple values with commas.
+        </p>
+        <div id="rulesContainer"></div>
+        <button id="addRuleButton">+ Add rule</button>
+      </section>
+
+      <section>
+        <h2>Backup</h2>
+        <p class="hint">
+          Export writes all settings (rules and behavior) to a JSON file. Import restores them.
+        </p>
+        <div class="button-row">
+          <button id="exportButton">Export settings (JSON)</button>
+          <button id="importButton">Import settings</button>
+          <input type="file" id="importFile" accept="application/json,.json" hidden>
+        </div>
+      </section>
+
+      <footer>
+        <button id="saveButton" class="primary">Save</button>
+        <button id="resetButton">Reset defaults</button>
+        <span id="status" role="status"></span>
+      </footer>
+    </main>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>
