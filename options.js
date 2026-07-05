@@ -6,7 +6,46 @@ import {
   validateRules
 } from "./shared.js";
 
-const GROUP_COLORS = ["grey", "blue", "red", "yellow", "green", "pink", "purple", "cyan", "orange"];
+// Approximate hex values for Chrome's tab group colors. Chrome does not
+// publish exact pixel values (and they can shift slightly with theme), so
+// these are close, readable approximations — not a guaranteed pixel match.
+const GROUP_COLOR_HEX = {
+  grey: "#5f6368",
+  blue: "#1a73e8",
+  red: "#d93025",
+  yellow: "#f9ab00",
+  green: "#188038",
+  pink: "#d01884",
+  purple: "#9334e6",
+  cyan: "#00778a",
+  orange: "#b3560a"
+};
+const GROUP_COLORS = Object.keys(GROUP_COLOR_HEX);
+
+/**
+ * Pick black or white text for a given hex background using the WCAG
+ * relative luminance formula, so every swatch stays readable regardless of
+ * how light or dark its color is.
+ */
+function readableTextColor(hex) {
+  const rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const [r, g, b] = rgb.map((c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)));
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.45 ? "#1a1a1a" : "#ffffff";
+}
+
+/** Apply the color swatch styling to a <select>'s options and its own closed-state box. */
+function applyColorSwatchStyles(selectEl) {
+  Array.from(selectEl.options).forEach((option) => {
+    const hex = GROUP_COLOR_HEX[option.value] || "#5f6368";
+    option.style.backgroundColor = hex;
+    option.style.color = readableTextColor(hex);
+  });
+  const hex = GROUP_COLOR_HEX[selectEl.value] || "#5f6368";
+  selectEl.style.backgroundColor = hex;
+  selectEl.style.color = readableTextColor(hex);
+  selectEl.style.borderColor = hex;
+}
 
 const activeWindowOnly = document.getElementById("activeWindowOnly");
 const addRuleButton = document.getElementById("addRuleButton");
@@ -93,6 +132,10 @@ function renderRuleCard(rule, index, total) {
     colorSelect.append(option);
   });
   colorSelect.value = GROUP_COLORS.includes(rule.color) ? rule.color : "grey";
+  applyColorSwatchStyles(colorSelect);
+  // Keep the closed <select> box tinted to match the currently chosen color —
+  // browsers don't do this automatically from <option> background styling.
+  colorSelect.addEventListener("change", () => applyColorSwatchStyles(colorSelect));
   colorLabel.append(colorSpan, colorSelect);
 
   const controls = document.createElement("div");
