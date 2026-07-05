@@ -10,6 +10,7 @@ A small Chrome Manifest V3 extension that groups tabs by local rules.
 - Close duplicate tabs.
 - Sort tabs: ungrouped tabs and tab groups are arranged left-to-right; tab groups can be pinned to either the left or right side (see Options below).
 - Edit rules with a field-based editor on the options page (name, color, domains, URL substrings, title keywords, with reordering).
+- Optional catch-all group for every tab that doesn't match any rule (off by default). When sorting, the catch-all group is always placed last.
 - Export all settings to a JSON file and import them back.
 - Everything runs locally in Chrome. No network calls are made.
 
@@ -51,6 +52,10 @@ Rules are evaluated from top to bottom and edited on the options page. Each rule
 - **Domains** — comma-separated. Matches the exact domain and its subdomains (`github.com` matches `docs.github.com`). Chrome-style patterns such as `*://*.github.com/*` are also accepted.
 - **URL contains** — comma-separated substrings matched against the full URL.
 - **Title keywords** — comma-separated substrings matched against the tab title (case-insensitive).
+
+### Catch-all group
+
+At the top of the `Rules` section, `Group all other tabs` (off by default) adds an optional catch-all group for tabs that don't match any rule. When enabled, you can set its name (default `Others`) and color. Any tab not matched by a rule is placed into this group, and when sorting it is always placed after all other groups.
 
 ## Backup
 

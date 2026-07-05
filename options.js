@@ -49,6 +49,10 @@ function applyColorSwatchStyles(selectEl) {
 
 const activeWindowOnly = document.getElementById("activeWindowOnly");
 const addRuleButton = document.getElementById("addRuleButton");
+const catchAllEnabled = document.getElementById("catchAllEnabled");
+const catchAllName = document.getElementById("catchAllName");
+const catchAllColor = document.getElementById("catchAllColor");
+const catchAllFields = document.getElementById("catchAllFields");
 const closeDuplicateScope = document.getElementById("closeDuplicateScope");
 const collapseGroups = document.getElementById("collapseGroups");
 const duplicateMatch = document.getElementById("duplicateMatch");
@@ -195,6 +199,63 @@ function renderRules(rules) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// Catch-all block (a single optional "Others" rule, managed separately from
+// the normal rule cards for clarity, but stored as one catchAll rule).
+// ---------------------------------------------------------------------------
+
+let catchAllInitialized = false;
+
+function initCatchAllColorOptions() {
+  GROUP_COLORS.forEach((color) => {
+    const option = document.createElement("option");
+    option.value = color;
+    option.textContent = color;
+    catchAllColor.append(option);
+  });
+  catchAllColor.addEventListener("change", () => applyColorSwatchStyles(catchAllColor));
+  catchAllEnabled.addEventListener("change", updateCatchAllDisabledState);
+  catchAllInitialized = true;
+}
+
+function updateCatchAllDisabledState() {
+  const enabled = catchAllEnabled.checked;
+  catchAllFields.classList.toggle("catchall-fields-disabled", !enabled);
+  catchAllName.disabled = !enabled;
+  catchAllColor.disabled = !enabled;
+}
+
+// Populate the catch-all block from a rules array (extracting the catchAll rule
+// if present). Returns the rules array with the catch-all rule removed.
+function renderCatchAll(rules) {
+  if (!catchAllInitialized) {
+    initCatchAllColorOptions();
+  }
+  const catchAllRule = rules.find((rule) => rule.catchAll) || null;
+  catchAllEnabled.checked = Boolean(catchAllRule);
+  catchAllName.value = catchAllRule?.name || "";
+  catchAllColor.value = GROUP_COLORS.includes(catchAllRule?.color) ? catchAllRule.color : "grey";
+  applyColorSwatchStyles(catchAllColor);
+  updateCatchAllDisabledState();
+  return rules.filter((rule) => !rule.catchAll);
+}
+
+// Build the catch-all rule object from the block, or null if disabled.
+function readCatchAllRule() {
+  if (!catchAllEnabled.checked) {
+    return null;
+  }
+  return {
+    name: catchAllName.value.trim() || "Others",
+    color: catchAllColor.value,
+    domains: [],
+    urlIncludes: [],
+    titleKeywords: [],
+    catchAll: true
+  };
+}
+
+
 // Read the current field values back into a rules array. Used both for saving
 // and for preserving in-progress edits across re-renders (reorder/add/delete).
 function readRulesFromDom() {
@@ -245,11 +306,20 @@ function renderOptions(options) {
   groupPosition.value = options.groupPosition;
   skipPinnedTabs.checked = options.skipPinnedTabs;
   sortAfterGrouping.checked = options.sortAfterGrouping;
-  renderRules(options.rules);
+  // Pull the catch-all rule (if any) out into its own block, and render only
+  // the normal rules as cards.
+  const normalRules = renderCatchAll(options.rules);
+  renderRules(normalRules);
 }
 
 function collectOptions() {
   const rules = readRulesFromDom();
+  // Append the catch-all rule (if enabled) at the END so it's always last —
+  // both for classification order and for sort placement.
+  const catchAllRule = readCatchAllRule();
+  if (catchAllRule) {
+    rules.push(catchAllRule);
+  }
   validateRules(rules);
 
   return {

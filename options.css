@@ -189,6 +189,53 @@ footer {
   background: color-mix(in srgb, #b3261e 12%, Canvas);
 }
 
+.catchall-box {
+  background: color-mix(in srgb, CanvasText 4%, Canvas);
+  border: 1px solid color-mix(in srgb, CanvasText 14%, Canvas);
+  border-radius: 10px;
+  display: grid;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 14px;
+}
+
+.catchall-toggle {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  font-weight: 600;
+  gap: 8px;
+}
+
+.catchall-toggle input {
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.catchall-hint {
+  margin: 0;
+}
+
+.catchall-fields {
+  align-items: end;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.catchall-name {
+  flex: 1 1 220px;
+}
+
+.catchall-fields-disabled {
+  opacity: 0.45;
+}
+
+.catchall-fields-disabled input,
+.catchall-fields-disabled select {
+  cursor: not-allowed;
+}
+
 .button-row {
   display: flex;
   gap: 10px;

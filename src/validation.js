@@ -65,14 +65,16 @@ export function validateRule(rule, index) {
       throw new ValidationError(`Rule "${rule.name}" field "${field}" must be an array.`);
     }
   }
-  // A rule that matches nothing is almost certainly a mistake worth flagging.
+  // A rule that matches nothing is almost certainly a mistake worth flagging
+  // — unless it's an intentional catch-all for "everything else".
   const hasCriteria =
     toStringArray(rule.domains).length > 0 ||
     toStringArray(rule.urlIncludes).length > 0 ||
     toStringArray(rule.titleKeywords).length > 0;
-  if (!hasCriteria) {
+  if (!hasCriteria && !rule.catchAll) {
     throw new ValidationError(
-      `Rule "${rule.name}" has no match criteria. Add at least one domain, URL substring, or title keyword.`
+      `Rule "${rule.name}" has no match criteria. Add at least one domain, URL substring, or title keyword, ` +
+        `or mark it as a catch-all rule.`
     );
   }
 }

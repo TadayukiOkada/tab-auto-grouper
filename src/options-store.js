@@ -32,7 +32,8 @@ function normalizeRule(rule) {
     color: typeof rule.color === "string" ? rule.color : "grey",
     domains: toStringArray(rule.domains),
     urlIncludes: toStringArray(rule.urlIncludes),
-    titleKeywords: toStringArray(rule.titleKeywords)
+    titleKeywords: toStringArray(rule.titleKeywords),
+    catchAll: Boolean(rule.catchAll)
   };
 }
 

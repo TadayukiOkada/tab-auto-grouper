@@ -64,6 +64,28 @@
           Rules are evaluated from top to bottom. Domains match both the exact domain and subdomains.
           Separate multiple values with commas.
         </p>
+
+        <div class="catchall-box">
+          <label class="catchall-toggle">
+            <input type="checkbox" id="catchAllEnabled">
+            <span>Group all other tabs</span>
+          </label>
+          <p class="hint catchall-hint">
+            Tabs that don't match any rule below are placed into this group.
+            When sorting, it always goes last.
+          </p>
+          <div class="catchall-fields" id="catchAllFields">
+            <label class="rule-field catchall-name">
+              <span>Name</span>
+              <input type="text" id="catchAllName" placeholder="Others">
+            </label>
+            <label class="rule-field rule-color">
+              <span>Color</span>
+              <select id="catchAllColor" class="rule-color-select"></select>
+            </label>
+          </div>
+        </div>
+
         <div id="rulesContainer"></div>
         <button id="addRuleButton">+ Add rule</button>
       </section>
