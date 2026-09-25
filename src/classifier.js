@@ -3,6 +3,41 @@
 
 import { parseUrl, getTabUrl, normalizeHost, domainMatches } from "./url-utils.js";
 
+// Latin letters/digits/underscore count as "word" characters. CJK text has no
+// clear word boundaries, so it is deliberately not included here.
+const WORD_CHAR = /[\p{Script=Latin}\p{N}_]/u;
+
+/**
+ * Substring match on a title, but where the keyword starts/ends with a word
+ * character, it must not be embedded in a longer word (so "ira" does not match
+ * "Iran"). Keyword edges that are non-Latin (e.g. Japanese) match as substrings.
+ * @param {string} title lowercased title
+ * @param {string} keyword lowercased keyword
+ * @returns {boolean}
+ */
+function titleHasKeyword(title, keyword) {
+  if (!keyword) {
+    return false;
+  }
+  const checkStart = WORD_CHAR.test(keyword[0]);
+  const checkEnd = WORD_CHAR.test(keyword[keyword.length - 1]);
+  let from = 0;
+  for (;;) {
+    const index = title.indexOf(keyword, from);
+    if (index === -1) {
+      return false;
+    }
+    const before = title.slice(0, index).slice(-1);
+    const after = title.charAt(index + keyword.length);
+    const startOk = !checkStart || !before || !WORD_CHAR.test(before);
+    const endOk = !checkEnd || !after || !WORD_CHAR.test(after);
+    if (startOk && endOk) {
+      return true;
+    }
+    from = index + 1;
+  }
+}
+
 /**
  * Find the first rule that matches a tab, or null if none do.
  *
@@ -41,7 +76,7 @@ export function classifyTab(tab, rules) {
     const matches =
       domains.some((domain) => domainMatches(parsed.hostname, domain)) ||
       urlIncludes.some((needle) => url.includes(String(needle).toLowerCase())) ||
-      titleKeywords.some((keyword) => title.includes(String(keyword).toLowerCase()));
+      titleKeywords.some((keyword) => titleHasKeyword(title, String(keyword).toLowerCase()));
 
     if (matches) {
       return rule;

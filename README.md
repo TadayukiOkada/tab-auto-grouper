@@ -51,7 +51,7 @@ Rules are evaluated from top to bottom and edited on the options page. Each rule
 - **Color** — one of `grey`, `blue`, `red`, `yellow`, `green`, `pink`, `purple`, `cyan`, `orange`.
 - **Domains** — comma-separated. Matches the exact domain and its subdomains (`github.com` matches `docs.github.com`). Chrome-style patterns such as `*://*.github.com/*` are also accepted.
 - **URL contains** — comma-separated substrings matched against the full URL.
-- **Title keywords** — comma-separated substrings matched against the tab title (case-insensitive).
+- **Title keywords** — comma-separated substrings matched against the tab title (case-insensitive). Latin keywords match whole words only (`IRA` does not match `Iran`); Japanese/CJK keywords match as plain substrings.
 
 ### Catch-all group
 
