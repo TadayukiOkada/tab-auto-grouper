@@ -101,7 +101,7 @@ export function validateRules(rules) {
   for (const rule of rules) {
     const key = normalizeGroupTitle(rule.name);
     if (seen.has(key)) {
-      duplicates.add(rule.name);
+      duplicates.add(rule.name.trim());
     }
     seen.add(key);
   }

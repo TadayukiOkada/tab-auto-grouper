@@ -109,8 +109,17 @@ export async function getOptions() {
  * @returns {Promise<typeof DEFAULT_OPTIONS>}
  */
 export async function saveOptions(options) {
+  // Validate the raw input before mergeOptions' lenient normalization, which
+  // would otherwise fall back to the default rules for a missing `rules`
+  // array, coerce invalid colors to grey, and drop malformed rule entries.
+  if (!isPlainObject(options)) {
+    throw new ValidationError("Settings must be a JSON object.");
+  }
+  if (!Array.isArray(options.rules)) {
+    throw new ValidationError('Settings must include a "rules" array.');
+  }
+  validateRules(options.rules);
   const normalized = mergeOptions(options);
-  validateRules(normalized.rules);
 
   const payload = JSON.stringify({ [STORAGE_KEY]: normalized });
   const payloadBytes = new TextEncoder().encode(payload).length;
