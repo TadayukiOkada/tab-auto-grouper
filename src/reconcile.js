@@ -24,6 +24,11 @@ import {
  * @returns {Promise<chrome.tabs.Tab[]>}
  */
 export async function getTargetTabs(options, windowId) {
+  if (options.activeWindowOnly && windowId == null) {
+    // No window to scope to — querying unscoped here would fall through to
+    // "all windows", which activeWindowOnly is meant to exclude.
+    return [];
+  }
   const scopeWindowId = options.activeWindowOnly ? windowId : undefined;
   const tabs = await queryTabs(scopeWindowId);
   return tabs.filter((tab) => !(options.skipPinnedTabs && tab.pinned));
@@ -104,6 +109,11 @@ export async function ungroupStaleTabs(options, windowId) {
  * @returns {Promise<{ collapsed: number }>}
  */
 export async function collapseManagedGroups(options, windowId) {
+  if (options.activeWindowOnly && windowId == null) {
+    // No window to scope to — querying unscoped here would fall through to
+    // "all windows", which activeWindowOnly is meant to exclude.
+    return { collapsed: 0 };
+  }
   const scopeWindowId = options.activeWindowOnly ? windowId : undefined;
   const groups = await queryGroups(scopeWindowId);
   const ruleNames = new Set(options.rules.map((rule) => normalizeGroupTitle(rule.name)));

@@ -4,10 +4,12 @@
 // it on without editing code by either:
 //   • running `TabAutoGrouper.setDebug(true)` in the service worker console
 //     (exposed in background.js), or
-//   • setting chrome.storage.local "tabAutoGrouperDebug" to true.
+//   • setting extensionApi.storage.local "tabAutoGrouperDebug" to true.
 //
 // The flag is cached in memory and refreshed from storage at startup so that
 // hot paths don't await storage on every log call.
+
+import { extensionApi } from "./runtime.js";
 
 const DEBUG_STORAGE_KEY = "tabAutoGrouperDebug";
 const LOG_PREFIX = "[TabAutoGrouper]";
@@ -16,11 +18,11 @@ let debugEnabled = false;
 
 /**
  * Load the persisted debug flag once at module init. Safe to call in any
- * context that has chrome.storage; silently no-ops otherwise.
+ * context that has storage access; silently no-ops otherwise.
  */
 export async function initDebugFlag() {
   try {
-    const stored = await chrome.storage.local.get(DEBUG_STORAGE_KEY);
+    const stored = await extensionApi.storage.local.get(DEBUG_STORAGE_KEY);
     debugEnabled = Boolean(stored?.[DEBUG_STORAGE_KEY]);
   } catch {
     debugEnabled = false;
@@ -32,7 +34,7 @@ export async function initDebugFlag() {
 export async function setDebug(enabled) {
   debugEnabled = Boolean(enabled);
   try {
-    await chrome.storage.local.set({ [DEBUG_STORAGE_KEY]: debugEnabled });
+    await extensionApi.storage.local.set({ [DEBUG_STORAGE_KEY]: debugEnabled });
   } catch {
     // Ignore persistence failures; the in-memory flag still applies.
   }

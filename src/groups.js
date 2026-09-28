@@ -1,4 +1,4 @@
-// Group reconciliation: mapping rules to Chrome tab groups, merging duplicate
+// Group reconciliation: mapping rules to tab groups, merging duplicate
 // same-named groups, and packing groups to the left or right of the tab strip.
 //
 // A "managed" group is one whose (normalized) title matches a rule name.
@@ -108,7 +108,7 @@ async function mergeDuplicatesInWindow(windowId, rules) {
     });
 
     for (const duplicate of withInfo.slice(1)) {
-      const dupTabs = await chrome.tabs.query({ windowId, groupId: duplicate.group.id });
+      const dupTabs = await queryGroupTabs(windowId, duplicate.group.id);
       if (dupTabs.length === 0) {
         merged += 1;
         continue;
@@ -235,13 +235,20 @@ export async function sortTabsWithinGroups({ activeWindowOnly, windowId, compare
       }
       const start = tabs[0].index;
       const ordered = [...tabs].sort(compareTabs);
+      // `current` mirrors the live order of this group's tabs so each move is
+      // checked against where a tab actually is, not its pre-sort snapshot
+      // index (which earlier moves in this loop can shift).
+      const current = [...tabs];
       for (let offset = 0; offset < ordered.length; offset += 1) {
         const tab = ordered[offset];
         const targetIndex = start + offset;
-        if (tab.index !== targetIndex) {
+        const currentPos = current.indexOf(tab);
+        if (currentPos !== offset) {
           const ok = await moveTab(tab.id, targetIndex);
           if (ok) {
             moved += 1;
+            current.splice(currentPos, 1);
+            current.splice(offset, 0, tab);
           }
         }
       }

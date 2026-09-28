@@ -32,8 +32,8 @@ import {
 import { debug } from "./logger.js";
 
 /**
- * Group matching tabs into Chrome tab groups, reconciling with existing groups
- * and then packing groups to the configured side.
+ * Group matching tabs into tab groups, reconciling with existing groups and
+ * then packing groups to the configured side.
  * @param {number} [windowId]
  */
 export async function groupTabs(windowId) {
@@ -68,6 +68,7 @@ export async function groupTabs(windowId) {
   for (const bucket of buckets.values()) {
     const tabIds = bucket.tabs.map((tab) => tab.id);
     let target = await findTargetGroup(bucket.windowId, bucket.rule, options.rules);
+    let bucketFailed = 0;
 
     if (!target) {
       const groupId = await createGroup(bucket.windowId, tabIds);
@@ -82,6 +83,7 @@ export async function groupTabs(windowId) {
       const idsToAdd = tabIds.filter((id) => freshById.get(id)?.groupId !== target.id);
       const result = await addTabsToGroup(target.id, idsToAdd);
       failedGroupTabs += result.failed;
+      bucketFailed = result.failed;
     }
 
     await updateGroup(target.id, {
@@ -89,7 +91,7 @@ export async function groupTabs(windowId) {
       color: bucket.rule.color || "grey",
       collapsed: Boolean(options.collapseGroups)
     });
-    groupedTabCount += bucket.tabs.length;
+    groupedTabCount += bucket.tabs.length - bucketFailed;
   }
 
   // Chrome may keep an emptied duplicate group alive briefly; merge again.
@@ -133,8 +135,8 @@ export async function groupTabs(windowId) {
 }
 
 /**
- * Sort tabs: pack groups to the configured side, then order ungrouped tabs on
- * the opposite side by rule/host/title.
+ * Sort tabs: pack groups to the configured side, then order both ungrouped
+ * tabs and the tabs inside each group using the configured tab sort method.
  * @param {{ activeWindowOnly?: boolean, windowId?: number }} params
  */
 export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
@@ -177,12 +179,21 @@ export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
       .filter((tab) => !tab.pinned && tab.groupId === NO_GROUP)
       .sort(compareTabs);
 
+    // `current` mirrors the live order of this band of the tab strip so each
+    // move is checked against where a tab actually is, not its pre-sort
+    // snapshot index (which earlier moves in this loop can shift).
+    const current = [...ungrouped];
     for (let offset = 0; offset < ungrouped.length; offset += 1) {
       const tab = ungrouped[offset];
       const targetIndex = ungroupedStart + offset;
-      if (tab.index !== targetIndex) {
-        await moveTab(tab.id, targetIndex);
-        moved += 1;
+      const currentPos = current.indexOf(tab);
+      if (currentPos !== offset) {
+        const ok = await moveTab(tab.id, targetIndex);
+        if (ok) {
+          moved += 1;
+          current.splice(currentPos, 1);
+          current.splice(offset, 0, tab);
+        }
       }
     }
   }
@@ -199,16 +210,22 @@ export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
 }
 
 /**
- * Close duplicate tabs, keeping the "best" instance of each URL (active >
- * pinned > earliest window/index).
+ * Close duplicate tabs, keeping the "best" instance of each URL. When
+ * skipPinnedTabs is on, a pinned tab is always the kept instance (so every
+ * other tab sharing its URL is treated as a duplicate and closed) and is
+ * itself never closed even if it's the later-seen "duplicate"; otherwise the
+ * order is active > pinned > earliest window/index.
  * @param {number} [windowId]
  */
 export async function closeDuplicateTabs(windowId) {
   const options = await getOptions();
   const scopeWindowId = options.closeDuplicateScope === "activeWindow" ? windowId : undefined;
-  const tabs = (await queryTabs(scopeWindowId)).filter((tab) => !(options.skipPinnedTabs && tab.pinned));
+  const tabs = await queryTabs(scopeWindowId);
 
   const ranked = [...tabs].sort((a, b) => {
+    if (options.skipPinnedTabs && a.pinned !== b.pinned) {
+      return a.pinned ? -1 : 1;
+    }
     if (a.active !== b.active) {
       return a.active ? -1 : 1;
     }
@@ -229,6 +246,9 @@ export async function closeDuplicateTabs(windowId) {
       continue;
     }
     if (seen.has(key)) {
+      if (options.skipPinnedTabs && tab.pinned) {
+        continue; // never close a pinned tab, even if it's the "duplicate"
+      }
       closeIds.push(tab.id);
     } else {
       seen.add(key);

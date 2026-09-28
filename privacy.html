@@ -39,12 +39,13 @@
   </head>
   <body>
     <h1>Privacy Policy for Tab Auto Grouper</h1>
-    <p class="updated">Last updated: July 2026</p>
+    <p class="updated">Last updated: September 2026</p>
 
     <p>
-      Tab Auto Grouper is a Chrome extension that automatically groups, sorts,
-      and deduplicates browser tabs based on rules you configure. This page
-      explains how the extension handles your data.
+      Tab Auto Grouper is a browser extension (Chrome and Firefox) that
+      automatically groups, sorts, and deduplicates browser tabs based on
+      rules you configure. This page explains how the extension handles
+      your data.
     </p>
 
     <h2>What data is read</h2>
@@ -76,9 +77,9 @@
     <p>
       Your grouping rules and settings (for example, group colors, group
       position, and duplicate-detection mode) are stored locally on your
-      device using Chrome's <code>chrome.storage.local</code> API. This data
-      is not synced to any external server by this extension and is not
-      accessible to the developer.
+      device using the browser's local extension storage API
+      (<code>storage.local</code>). This data is not synced to any external
+      server by this extension and is not accessible to the developer.
     </p>
     <p>
       If you use the extension's <strong>Export settings</strong> feature, a
@@ -90,7 +91,7 @@
     <h2>Permissions used</h2>
     <ul>
       <li><code>tabs</code> — to read tab URLs/titles for rule matching, and to move/organize tabs.</li>
-      <li><code>tabGroups</code> — to create, update, and reposition Chrome tab groups.</li>
+      <li><code>tabGroups</code> — to create, update, and reposition tab groups.</li>
       <li><code>storage</code> — to save your rules and settings locally.</li>
     </ul>
 

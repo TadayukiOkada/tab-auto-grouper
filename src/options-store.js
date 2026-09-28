@@ -5,6 +5,7 @@ import {
   STORAGE_KEY,
   SCHEMA_VERSION,
   DEFAULT_OPTIONS,
+  GROUP_COLORS,
   LOCAL_STORAGE_QUOTA_BYTES
 } from "./constants.js";
 import {
@@ -16,6 +17,7 @@ import {
   ValidationError
 } from "./validation.js";
 import { debug } from "./logger.js";
+import { extensionApi } from "./runtime.js";
 
 /** Deep clone via structured JSON. Options are plain data, so this is safe. */
 function clone(value) {
@@ -29,7 +31,7 @@ function clone(value) {
 function normalizeRule(rule) {
   return {
     name: typeof rule.name === "string" ? rule.name.trim() : "",
-    color: typeof rule.color === "string" ? rule.color : "grey",
+    color: oneOf(rule.color, GROUP_COLORS, "grey"),
     domains: toStringArray(rule.domains),
     urlIncludes: toStringArray(rule.urlIncludes),
     titleKeywords: toStringArray(rule.titleKeywords),
@@ -51,7 +53,7 @@ export function mergeOptions(stored) {
     return base;
   }
 
-  const rules = Array.isArray(stored.rules) && stored.rules.length > 0
+  const rules = Array.isArray(stored.rules)
     ? stored.rules.filter(isPlainObject).map(normalizeRule)
     : base.rules;
 
@@ -73,29 +75,35 @@ export function mergeOptions(stored) {
 }
 
 /**
- * Read options, preferring chrome.storage.local. Transparently migrates
- * settings written by older versions that used chrome.storage.sync.
+ * Read options, preferring local storage. Transparently migrates settings
+ * written by older versions that used sync storage.
  * @returns {Promise<typeof DEFAULT_OPTIONS>}
  */
 export async function getOptions() {
-  const local = await chrome.storage.local.get(STORAGE_KEY);
+  const local = await extensionApi.storage.local.get(STORAGE_KEY);
   if (local?.[STORAGE_KEY]) {
     return mergeOptions(local[STORAGE_KEY]);
   }
 
-  const sync = await chrome.storage.sync.get(STORAGE_KEY);
-  if (sync?.[STORAGE_KEY]) {
-    const migrated = mergeOptions(sync[STORAGE_KEY]);
-    await chrome.storage.local.set({ [STORAGE_KEY]: migrated });
-    debug("migrated settings from sync to local storage");
-    return migrated;
+  try {
+    const sync = await extensionApi.storage.sync.get(STORAGE_KEY);
+    if (sync?.[STORAGE_KEY]) {
+      const migrated = mergeOptions(sync[STORAGE_KEY]);
+      await extensionApi.storage.local.set({ [STORAGE_KEY]: migrated });
+      debug("migrated settings from sync to local storage");
+      return migrated;
+    }
+  } catch (err) {
+    // sync storage can be disabled/unavailable (some Firefox configurations);
+    // don't let a failed legacy-migration read break every action.
+    debug("storage.sync read failed, skipping migration", err?.message);
   }
 
   return mergeOptions(null);
 }
 
 /**
- * Validate, normalize, and persist options to chrome.storage.local.
+ * Validate, normalize, and persist options to local storage.
  * Throws ValidationError on invalid rules or oversized payloads.
  * @param {unknown} options
  * @returns {Promise<typeof DEFAULT_OPTIONS>}
@@ -105,14 +113,15 @@ export async function saveOptions(options) {
   validateRules(normalized.rules);
 
   const payload = JSON.stringify({ [STORAGE_KEY]: normalized });
-  if (payload.length > LOCAL_STORAGE_QUOTA_BYTES) {
+  const payloadBytes = new TextEncoder().encode(payload).length;
+  if (payloadBytes > LOCAL_STORAGE_QUOTA_BYTES) {
     throw new ValidationError(
-      `Settings exceed the local storage limit (${payload.length} / ${LOCAL_STORAGE_QUOTA_BYTES} bytes). ` +
+      `Settings exceed the local storage limit (${payloadBytes} / ${LOCAL_STORAGE_QUOTA_BYTES} bytes). ` +
         "Reduce the number of rules or keywords."
     );
   }
 
-  await chrome.storage.local.set({ [STORAGE_KEY]: normalized });
+  await extensionApi.storage.local.set({ [STORAGE_KEY]: normalized });
   return normalized;
 }
 
@@ -122,9 +131,9 @@ export async function saveOptions(options) {
  */
 export async function resetOptions() {
   const defaults = clone(DEFAULT_OPTIONS);
-  await chrome.storage.local.set({ [STORAGE_KEY]: defaults });
+  await extensionApi.storage.local.set({ [STORAGE_KEY]: defaults });
   try {
-    await chrome.storage.sync.remove(STORAGE_KEY);
+    await extensionApi.storage.sync.remove(STORAGE_KEY);
   } catch {
     // Legacy cleanup is best-effort.
   }

@@ -1,3 +1,5 @@
+import { extensionApi } from "./src/runtime.js";
+
 const actionButtons = Array.from(document.querySelectorAll(".actions button"));
 const countsElement = document.getElementById("counts");
 const dedupeButton = document.getElementById("dedupeButton");
@@ -18,20 +20,21 @@ function setStatus(message, isError = false) {
   statusElement.style.color = isError ? "#b3261e" : "";
 }
 
-// FIX #2: MV3 service workers can be terminated between interactions.
-// If the first sendMessage call fails with "Receiving end does not exist",
-// wait briefly for the SW to start up and retry once before surfacing the error.
+// Chrome's MV3 service worker and Firefox's non-persistent event page can
+// both be terminated between interactions. If the first sendMessage call
+// fails with "Receiving end does not exist", wait briefly for it to start
+// up and retry once before surfacing the error.
 //
-// chrome.windows.getCurrent() is called HERE, in the popup's own script
-// context, where it reliably resolves to the window the popup is attached
-// to. The background service worker has no window of its own, so it must
-// not try to resolve "the current window" itself — that is what silently
-// broke "Sort"/"Group tabs" when the service worker guessed the wrong
-// window. We resolve it once here and send it with every message instead.
+// windows.getCurrent() is called HERE, in the popup's own script context,
+// where it reliably resolves to the window the popup is attached to. The
+// background script has no window of its own, so it must not try to
+// resolve "the current window" itself — that is what silently broke
+// "Sort"/"Group tabs" when the background script guessed the wrong window.
+// We resolve it once here and send it with every message instead.
 let cachedWindowId = null;
 async function getPopupWindowId() {
   if (cachedWindowId == null) {
-    const win = await chrome.windows.getCurrent();
+    const win = await extensionApi.windows.getCurrent();
     cachedWindowId = win.id;
   }
   return cachedWindowId;
@@ -42,7 +45,7 @@ async function sendMessage(type, payload) {
   const fullPayload = { ...(payload || {}), windowId };
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const response = await chrome.runtime.sendMessage({ type, payload: fullPayload });
+      const response = await extensionApi.runtime.sendMessage({ type, payload: fullPayload });
       if (!response || !response.ok) {
         throw new Error(response?.error ?? "Extension action failed.");
       }
@@ -134,7 +137,7 @@ dedupeButton.addEventListener("click", () => {
 });
 
 optionsButton.addEventListener("click", () => {
-  chrome.runtime.openOptionsPage();
+  extensionApi.runtime.openOptionsPage();
 });
 
 refreshPreview().catch((error) => {

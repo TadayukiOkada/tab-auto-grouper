@@ -1,19 +1,21 @@
-// A thin, defensive wrapper over the Chrome tabs/tabGroups/windows APIs.
+// A thin, defensive wrapper over the tabs/tabGroups/windows WebExtension APIs
+// (Chrome and Firefox alike, via extensionApi from ./runtime.js).
 //
 // Goals:
-//   • Never call chrome.windows.getCurrent() or use { currentWindow: true }
-//     from the service worker. A service worker has no window of its own, so
-//     "current window" resolution there is unreliable. Callers always pass an
-//     explicit windowId (resolved by the popup, which does have a window).
+//   • Never call extensionApi.windows.getCurrent() or use { currentWindow: true }
+//     from the background service worker/event page. It has no window of its
+//     own, so "current window" resolution there is unreliable. Callers always
+//     pass an explicit windowId (resolved by the popup, which does have a window).
 //   • Centralize the retry/settle logic for the handful of operations that can
 //     transiently fail while the tab strip is mid-rearrangement.
 //   • Provide small typed helpers (group tab counts, group lookups) so the
 //     higher-level modules read clearly.
 
 import { debug, error } from "./logger.js";
+import { extensionApi } from "./runtime.js";
 
-/** chrome.tabGroups.TAB_GROUP_ID_NONE, resolved defensively. */
-export const NO_GROUP = (typeof chrome !== "undefined" && chrome.tabGroups && chrome.tabGroups.TAB_GROUP_ID_NONE) ?? -1;
+/** tabGroups.TAB_GROUP_ID_NONE, resolved defensively. */
+export const NO_GROUP = extensionApi.tabGroups?.TAB_GROUP_ID_NONE ?? -1;
 
 /** Await a fixed delay. Used to let the tab strip settle between operations. */
 export function sleep(ms) {
@@ -22,7 +24,7 @@ export function sleep(ms) {
 
 /** All normal browser windows' ids. */
 export async function getAllNormalWindowIds() {
-  const windows = await chrome.windows.getAll({ windowTypes: ["normal"] });
+  const windows = await extensionApi.windows.getAll({ windowTypes: ["normal"] });
   return windows.map((win) => win.id);
 }
 
@@ -45,7 +47,7 @@ export async function resolveWindowIds(activeWindowOnly, windowId) {
  * @returns {Promise<chrome.tabs.Tab[]>}
  */
 export async function queryTabs(windowId) {
-  return chrome.tabs.query(windowId != null ? { windowId } : {});
+  return extensionApi.tabs.query(windowId != null ? { windowId } : {});
 }
 
 /**
@@ -54,7 +56,7 @@ export async function queryTabs(windowId) {
  * @returns {Promise<chrome.tabGroups.TabGroup[]>}
  */
 export async function queryGroups(windowId) {
-  return chrome.tabGroups.query(windowId != null ? { windowId } : {});
+  return extensionApi.tabGroups.query(windowId != null ? { windowId } : {});
 }
 
 /**
@@ -64,7 +66,7 @@ export async function queryGroups(windowId) {
  */
 export async function getGroup(groupId) {
   try {
-    return await chrome.tabGroups.get(groupId);
+    return await extensionApi.tabGroups.get(groupId);
   } catch {
     return null;
   }
@@ -77,7 +79,7 @@ export async function getGroup(groupId) {
  * @returns {Promise<{ size: number, start: number | null }>}
  */
 export async function getGroupTabInfo(windowId, groupId) {
-  const groupTabs = (await chrome.tabs.query({ windowId, groupId })).sort((a, b) => a.index - b.index);
+  const groupTabs = (await extensionApi.tabs.query({ windowId, groupId })).sort((a, b) => a.index - b.index);
   return {
     size: groupTabs.length,
     start: groupTabs.length > 0 ? groupTabs[0].index : null
@@ -91,13 +93,13 @@ export async function getGroupTabInfo(windowId, groupId) {
  * @returns {Promise<chrome.tabs.Tab[]>}
  */
 export async function queryGroupTabs(windowId, groupId) {
-  return (await chrome.tabs.query({ windowId, groupId })).sort((a, b) => a.index - b.index);
+  return (await extensionApi.tabs.query({ windowId, groupId })).sort((a, b) => a.index - b.index);
 }
 
 /** Update a group's title/color/collapsed state. Best-effort. */
 export async function updateGroup(groupId, props) {
   try {
-    await chrome.tabGroups.update(groupId, props);
+    await extensionApi.tabGroups.update(groupId, props);
     return true;
   } catch (err) {
     error("tabGroups.update failed", groupId, props, err);
@@ -118,7 +120,7 @@ export async function collapseGroup(groupId) {
  */
 export async function moveGroup(groupId, index) {
   try {
-    await chrome.tabGroups.move(groupId, { index });
+    await extensionApi.tabGroups.move(groupId, { index });
     return true;
   } catch (err) {
     error("tabGroups.move failed", groupId, index, err);
@@ -129,7 +131,7 @@ export async function moveGroup(groupId, index) {
 /** Move a single tab to an index. Best-effort. */
 export async function moveTab(tabId, index) {
   try {
-    await chrome.tabs.move(tabId, { index });
+    await extensionApi.tabs.move(tabId, { index });
     return true;
   } catch (err) {
     error("tabs.move failed", tabId, index, err);
@@ -141,7 +143,7 @@ export async function moveTab(tabId, index) {
 export async function ungroupTabs(tabIds) {
   const ids = Array.isArray(tabIds) ? tabIds : [tabIds];
   try {
-    await chrome.tabs.ungroup(ids);
+    await extensionApi.tabs.ungroup(ids);
     return true;
   } catch (err) {
     error("tabs.ungroup failed", ids, err);
@@ -156,7 +158,7 @@ export async function removeTabs(tabIds) {
     return true;
   }
   try {
-    await chrome.tabs.remove(ids);
+    await extensionApi.tabs.remove(ids);
     return true;
   } catch (err) {
     error("tabs.remove failed", ids, err);
@@ -180,14 +182,14 @@ export async function addTabsToGroup(groupId, tabIds) {
     return { added: 0, failed: 0 };
   }
   try {
-    await chrome.tabs.group({ groupId, tabIds: ids });
+    await extensionApi.tabs.group({ groupId, tabIds: ids });
     return { added: ids.length, failed: 0 };
   } catch (firstErr) {
     debug("group() rejected, retrying after ungroup", groupId, ids, firstErr?.message);
     await ungroupTabs(ids);
     await sleep(80);
     try {
-      await chrome.tabs.group({ groupId, tabIds: ids });
+      await extensionApi.tabs.group({ groupId, tabIds: ids });
       return { added: ids.length, failed: 0 };
     } catch (secondErr) {
       error("addTabsToGroup failed after retry", groupId, ids, secondErr);
@@ -206,13 +208,13 @@ export async function createGroup(windowId, tabIds) {
     return null;
   }
   try {
-    return await chrome.tabs.group({ tabIds: ids, createProperties: { windowId } });
+    return await extensionApi.tabs.group({ tabIds: ids, createProperties: { windowId } });
   } catch (firstErr) {
     debug("create group() rejected, retrying after ungroup", windowId, ids, firstErr?.message);
     await ungroupTabs(ids);
     await sleep(80);
     try {
-      return await chrome.tabs.group({ tabIds: ids, createProperties: { windowId } });
+      return await extensionApi.tabs.group({ tabIds: ids, createProperties: { windowId } });
     } catch (secondErr) {
       error("createGroup failed after retry", windowId, ids, secondErr);
       return null;

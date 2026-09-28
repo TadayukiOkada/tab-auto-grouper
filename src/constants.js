@@ -9,7 +9,7 @@ export const STORAGE_KEY = "tabAutoGrouperOptions";
 /** Current settings schema version. Bump when the shape of stored options changes. */
 export const SCHEMA_VERSION = 2;
 
-/** Valid Chrome tab group colors (chrome.tabGroups.ColorEnum). */
+/** Valid tab group colors (the WebExtensions tabGroups.ColorEnum, shared by Chrome and Firefox). */
 export const GROUP_COLORS = Object.freeze([
   "grey",
   "blue",
@@ -35,17 +35,18 @@ export const DUPLICATE_SCOPES = Object.freeze(["allWindows", "activeWindow"]);
  * How tabs are ordered by the sort action/step, both for ungrouped tabs and
  * for tabs within each group:
  *   - "default": rule priority, then host, then title (original behavior).
- *   - "url": full tab URL, alphabetically.
+ *   - "url": domain, then subdomain, then the URL's path/query/fragment.
  *   - "recency": most recently accessed tab first.
  *   - "title": tab title, alphabetically.
  */
 export const TAB_SORT_METHODS = Object.freeze(["default", "url", "recency", "title"]);
 
 /**
- * chrome.storage.local's default quota is 5,242,880 bytes (5 MiB) unless the
- * "unlimitedStorage" permission is granted, which this extension does not
- * request. Leave a safety margin below that for other extension data and for
- * the JSON overhead of nested rule arrays.
+ * storage.local's default quota is 5,242,880 bytes (5 MiB) on Chrome unless
+ * the "unlimitedStorage" permission is granted, which this extension does
+ * not request; Firefox imposes no such local-storage cap. Leave a safety
+ * margin below Chrome's limit for other extension data and for the JSON
+ * overhead of nested rule arrays.
  */
 export const LOCAL_STORAGE_QUOTA_BYTES = 4_500_000;
 

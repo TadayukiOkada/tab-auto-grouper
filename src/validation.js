@@ -108,6 +108,11 @@ export function validateRules(rules) {
   if (duplicates.size > 0) {
     throw new ValidationError(`Duplicate rule names are not allowed: ${[...duplicates].join(", ")}`);
   }
+
+  const catchAllCount = rules.filter((rule) => rule.catchAll).length;
+  if (catchAllCount > 1) {
+    throw new ValidationError("Only one catch-all rule is allowed.");
+  }
 }
 
 /**

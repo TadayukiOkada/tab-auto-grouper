@@ -26,7 +26,7 @@
           <input type="checkbox" id="sortAfterGrouping">
           Sort tabs after grouping
         </label>
-        <label>
+        <label title="When off, pinned tabs that match a rule are grouped like any other tab — the browser unpins them to do so.">
           <input type="checkbox" id="skipPinnedTabs">
           Leave pinned tabs untouched
         </label>
@@ -41,7 +41,7 @@
           Tab sort method
           <select id="tabSortMethod">
             <option value="default">Rule, then domain, then title</option>
-            <option value="url">Full URL (A-Z)</option>
+            <option value="url">Domain, then subdomain, then path</option>
             <option value="recency">Most recently used first</option>
             <option value="title">Title (A-Z)</option>
           </select>

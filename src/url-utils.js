@@ -76,6 +76,49 @@ export function normalizeDomainPattern(domain) {
   }
 }
 
+/** Whether a normalized host is a literal IPv4 or IPv6 address rather than a domain name. */
+function isIpAddress(host) {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.includes(":");
+}
+
+/**
+ * The registrable-ish domain of a hostname: its last two labels (e.g.
+ * "google.com" from "docs.google.com"). Not a real eTLD+1 (it doesn't know
+ * about multi-part public suffixes like "co.uk"), but enough to cluster
+ * same-site tabs together when sorting by URL. IP addresses are returned
+ * as-is rather than being sliced into a bogus last-two-labels "domain"
+ * (e.g. "1.10" from "192.168.1.10").
+ * @param {string} hostname
+ * @returns {string}
+ */
+export function registrableDomain(hostname) {
+  const host = normalizeHost(hostname);
+  if (isIpAddress(host)) {
+    return host;
+  }
+  const parts = host.split(".");
+  return parts.length <= 2 ? host : parts.slice(-2).join(".");
+}
+
+/**
+ * Sort key for the "url" tab sort method: orders by domain first (so
+ * subdomains of the same site cluster together), then by full subdomain
+ * within that domain, then by path/query/hash. Non-web URLs fall back to the
+ * lowercased raw string.
+ * @param {string} url
+ * @returns {string}
+ */
+export function urlSortKey(url) {
+  const parsed = parseUrl(url || "");
+  if (!parsed) {
+    return String(url || "").toLowerCase();
+  }
+  const domain = registrableDomain(parsed.hostname);
+  const host = normalizeHost(parsed.hostname);
+  const path = parsed.pathname + parsed.search + parsed.hash;
+  return `${domain}|${host}|${path}`.toLowerCase();
+}
+
 /**
  * Whether a hostname matches a domain pattern, including subdomains
  * ("github.com" matches "docs.github.com").

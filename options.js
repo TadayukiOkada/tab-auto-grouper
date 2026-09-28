@@ -1,14 +1,16 @@
 import {
   DEFAULT_OPTIONS,
+  GROUP_COLORS,
   getOptions,
   saveOptions,
   resetOptions,
   validateRules
 } from "./shared.js";
 
-// Approximate hex values for Chrome's tab group colors. Chrome does not
-// publish exact pixel values (and they can shift slightly with theme), so
-// these are close, readable approximations — not a guaranteed pixel match.
+// Approximate hex values for Chrome's tab group colors, keyed by the same
+// names as GROUP_COLORS. Chrome does not publish exact pixel values (and
+// they can shift slightly with theme), so these are close, readable
+// approximations — not a guaranteed pixel match.
 const GROUP_COLOR_HEX = {
   grey: "#5f6368",
   blue: "#1a73e8",
@@ -20,7 +22,6 @@ const GROUP_COLOR_HEX = {
   cyan: "#00778a",
   orange: "#b3560a"
 };
-const GROUP_COLORS = Object.keys(GROUP_COLOR_HEX);
 
 /**
  * Pick black or white text for a given hex background using the WCAG
@@ -354,6 +355,9 @@ saveButton.addEventListener("click", async () => {
 });
 
 resetButton.addEventListener("click", async () => {
+  if (!confirm("Reset all rules and settings to their defaults? This can't be undone.")) {
+    return;
+  }
   try {
     const options = await resetOptions();
     renderOptions(options);
@@ -379,8 +383,12 @@ exportButton.addEventListener("click", () => {
     const stamp = new Date().toISOString().slice(0, 10);
     anchor.href = url;
     anchor.download = `tab-auto-grouper-settings-${stamp}.json`;
+    document.body.appendChild(anchor);
     anchor.click();
-    URL.revokeObjectURL(url);
+    anchor.remove();
+    // Revoke after the download has had a chance to start — Firefox can
+    // cancel the download if the blob URL is revoked immediately.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     setStatus("Exported.");
   } catch (error) {
     setStatus(error.message || String(error), true);
