@@ -7,8 +7,10 @@ import { normalizeGroupTitle } from "./url-utils.js";
 import {
   queryTabs,
   queryGroups,
+  queryGroupTabs,
   getGroupTabInfo,
   moveGroup,
+  moveTab,
   updateGroup,
   addTabsToGroup,
   resolveWindowIds
@@ -210,4 +212,41 @@ export async function packGroups({ rules, groupPosition, activeWindowOnly, windo
   }
 
   return { moved, failed };
+}
+
+/**
+ * Reorder the tabs inside each group (any group, managed or not) using the
+ * given comparator, without changing which group a tab belongs to or where
+ * the group itself sits in the tab strip — each group's tabs are re-laid-out
+ * within the group's own contiguous index range.
+ * @param {{ activeWindowOnly: boolean, windowId: number | undefined, compareTabs: (a: chrome.tabs.Tab, b: chrome.tabs.Tab) => number }} params
+ * @returns {Promise<{ moved: number }>}
+ */
+export async function sortTabsWithinGroups({ activeWindowOnly, windowId, compareTabs }) {
+  const windowIds = await resolveWindowIds(activeWindowOnly, windowId);
+  let moved = 0;
+
+  for (const wid of windowIds) {
+    const groups = await queryGroups(wid);
+    for (const group of groups) {
+      const tabs = await queryGroupTabs(wid, group.id);
+      if (tabs.length < 2) {
+        continue;
+      }
+      const start = tabs[0].index;
+      const ordered = [...tabs].sort(compareTabs);
+      for (let offset = 0; offset < ordered.length; offset += 1) {
+        const tab = ordered[offset];
+        const targetIndex = start + offset;
+        if (tab.index !== targetIndex) {
+          const ok = await moveTab(tab.id, targetIndex);
+          if (ok) {
+            moved += 1;
+          }
+        }
+      }
+    }
+  }
+
+  return { moved };
 }

@@ -84,6 +84,16 @@ export async function getGroupTabInfo(windowId, groupId) {
   };
 }
 
+/**
+ * All tabs in a group, sorted by their current index within the window.
+ * @param {number} windowId
+ * @param {number} groupId
+ * @returns {Promise<chrome.tabs.Tab[]>}
+ */
+export async function queryGroupTabs(windowId, groupId) {
+  return (await chrome.tabs.query({ windowId, groupId })).sort((a, b) => a.index - b.index);
+}
+
 /** Update a group's title/color/collapsed state. Best-effort. */
 export async function updateGroup(groupId, props) {
   try {

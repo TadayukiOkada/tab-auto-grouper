@@ -65,6 +65,7 @@ const rulesContainer = document.getElementById("rulesContainer");
 const saveButton = document.getElementById("saveButton");
 const skipPinnedTabs = document.getElementById("skipPinnedTabs");
 const sortAfterGrouping = document.getElementById("sortAfterGrouping");
+const tabSortMethod = document.getElementById("tabSortMethod");
 const statusElement = document.getElementById("status");
 
 function setStatus(message, isError = false) {
@@ -306,6 +307,7 @@ function renderOptions(options) {
   groupPosition.value = options.groupPosition;
   skipPinnedTabs.checked = options.skipPinnedTabs;
   sortAfterGrouping.checked = options.sortAfterGrouping;
+  tabSortMethod.value = options.tabSortMethod;
   // Pull the catch-all rule (if any) out into its own block, and render only
   // the normal rules as cards.
   const normalRules = renderCatchAll(options.rules);
@@ -331,7 +333,8 @@ function collectOptions() {
     groupPosition: groupPosition.value,
     rules,
     skipPinnedTabs: skipPinnedTabs.checked,
-    sortAfterGrouping: sortAfterGrouping.checked
+    sortAfterGrouping: sortAfterGrouping.checked,
+    tabSortMethod: tabSortMethod.value
   };
 }
 

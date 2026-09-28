@@ -32,6 +32,16 @@ export const DUPLICATE_MATCH_MODES = Object.freeze(["exact", "withoutHash", "wit
 export const DUPLICATE_SCOPES = Object.freeze(["allWindows", "activeWindow"]);
 
 /**
+ * How tabs are ordered by the sort action/step, both for ungrouped tabs and
+ * for tabs within each group:
+ *   - "default": rule priority, then host, then title (original behavior).
+ *   - "url": full tab URL, alphabetically.
+ *   - "recency": most recently accessed tab first.
+ *   - "title": tab title, alphabetically.
+ */
+export const TAB_SORT_METHODS = Object.freeze(["default", "url", "recency", "title"]);
+
+/**
  * chrome.storage.local's default quota is 5,242,880 bytes (5 MiB) unless the
  * "unlimitedStorage" permission is granted, which this extension does not
  * request. Leave a safety margin below that for other extension data and for
@@ -109,5 +119,6 @@ export const DEFAULT_OPTIONS = Object.freeze({
   duplicateMatch: "withoutHash",
   skipPinnedTabs: true,
   sortAfterGrouping: true,
-  groupPosition: "left"
+  groupPosition: "left",
+  tabSortMethod: "default"
 });

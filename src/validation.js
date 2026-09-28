@@ -2,7 +2,13 @@
 // rules (e.g. from a hand-edited or corrupted JSON import) fail loudly with a
 // clear message instead of causing confusing downstream behavior.
 
-import { GROUP_COLORS, GROUP_POSITIONS, DUPLICATE_MATCH_MODES, DUPLICATE_SCOPES } from "./constants.js";
+import {
+  GROUP_COLORS,
+  GROUP_POSITIONS,
+  DUPLICATE_MATCH_MODES,
+  DUPLICATE_SCOPES,
+  TAB_SORT_METHODS
+} from "./constants.js";
 import { normalizeGroupTitle } from "./url-utils.js";
 
 /** @returns {boolean} true if value is a plain non-null object (not array). */
@@ -115,5 +121,6 @@ export function oneOf(value, allowed, fallback) {
 export const ENUMS = Object.freeze({
   GROUP_POSITIONS,
   DUPLICATE_MATCH_MODES,
-  DUPLICATE_SCOPES
+  DUPLICATE_SCOPES,
+  TAB_SORT_METHODS
 });

@@ -2,7 +2,7 @@
 // popup) so nothing here depends on service-worker "current window" guessing.
 
 import { getOptions } from "./options-store.js";
-import { classifyTab, tabSortKey } from "./classifier.js";
+import { classifyTab } from "./classifier.js";
 import { normalizeGroupTitle, normalizeDuplicateUrl, getTabUrl } from "./url-utils.js";
 import {
   NO_GROUP,
@@ -20,8 +20,10 @@ import {
 import {
   findTargetGroup,
   mergeDuplicateGroups,
-  packGroups
+  packGroups,
+  sortTabsWithinGroups
 } from "./groups.js";
+import { getTabComparator } from "./tab-sort.js";
 import {
   getTargetTabs,
   ungroupStaleTabs,
@@ -138,7 +140,13 @@ export async function groupTabs(windowId) {
 export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
   const options = await getOptions();
   const toLeft = options.groupPosition === "left";
-  debug("sortTabs start", { activeWindowOnly, windowId, groupPosition: options.groupPosition });
+  const compareTabs = getTabComparator(options.rules, options.tabSortMethod);
+  debug("sortTabs start", {
+    activeWindowOnly,
+    windowId,
+    groupPosition: options.groupPosition,
+    tabSortMethod: options.tabSortMethod
+  });
 
   const merge = await mergeDuplicateGroups({ rules: options.rules, activeWindowOnly, windowId });
   const pack = await packGroups({
@@ -147,9 +155,10 @@ export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
     activeWindowOnly,
     windowId
   });
+  const withinGroups = await sortTabsWithinGroups({ activeWindowOnly, windowId, compareTabs });
 
   const windowIds = await resolveWindowIds(activeWindowOnly, windowId);
-  let moved = 0;
+  let moved = withinGroups.moved;
 
   for (const wid of windowIds) {
     const tabs = await queryTabs(wid);
@@ -166,7 +175,7 @@ export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
 
     const ungrouped = tabs
       .filter((tab) => !tab.pinned && tab.groupId === NO_GROUP)
-      .sort((a, b) => tabSortKey(a, options.rules).localeCompare(tabSortKey(b, options.rules)));
+      .sort(compareTabs);
 
     for (let offset = 0; offset < ungrouped.length; offset += 1) {
       const tab = ungrouped[offset];

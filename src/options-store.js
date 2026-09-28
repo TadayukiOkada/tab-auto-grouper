@@ -65,7 +65,8 @@ export function mergeOptions(stored) {
     duplicateMatch: oneOf(stored.duplicateMatch, ENUMS.DUPLICATE_MATCH_MODES, base.duplicateMatch),
     skipPinnedTabs: Boolean(stored.skipPinnedTabs ?? base.skipPinnedTabs),
     sortAfterGrouping: Boolean(stored.sortAfterGrouping ?? base.sortAfterGrouping),
-    groupPosition: oneOf(stored.groupPosition, ENUMS.GROUP_POSITIONS, base.groupPosition)
+    groupPosition: oneOf(stored.groupPosition, ENUMS.GROUP_POSITIONS, base.groupPosition),
+    tabSortMethod: oneOf(stored.tabSortMethod, ENUMS.TAB_SORT_METHODS, base.tabSortMethod)
   };
 
   return merged;

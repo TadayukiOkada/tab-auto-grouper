@@ -42,6 +42,11 @@ The options page has a `Behavior` section with these settings:
 - **Sort tabs after grouping** — run the sort step automatically whenever `Group tabs` runs.
 - **Leave pinned tabs untouched**.
 - **Group position when sorting** — `Left side` (default) packs tab groups right after any pinned tabs, in rule order, with ungrouped tabs following after them. `Right side` places all tab groups at the right end of the tab strip instead, with ungrouped tabs on the left.
+- **Tab sort method** — how tabs are ordered by `Sort active window` and by "sort after grouping", both within each group and among ungrouped tabs:
+  - `Rule, then domain, then title` (default) — the original behavior: tabs cluster by matching rule, then by domain, then by title.
+  - `Full URL (A-Z)` — alphabetical by the tab's full URL.
+  - `Most recently used first` — most recently active tabs first.
+  - `Title (A-Z)` — alphabetical by tab title.
 
 ## Rules
 
@@ -70,9 +75,10 @@ The extension logic is split into focused ES modules under `src/`:
 - `url-utils.js` — URL, hostname, and domain-pattern helpers (pure functions).
 - `validation.js` — rule/type validation and small type guards.
 - `options-store.js` — reading, normalizing, validating, and persisting settings.
-- `classifier.js` — matching a tab to a rule and building sort keys.
+- `classifier.js` — matching a tab to a rule and building the default sort key.
+- `tab-sort.js` — comparators for the selectable tab sort methods (default, URL, recency, title).
 - `chrome-api.js` — a thin, defensive wrapper over the Chrome tabs/tabGroups/windows APIs.
-- `groups.js` — finding, merging, and packing tab groups.
+- `groups.js` — finding, merging, packing, and internally sorting tab groups.
 - `reconcile.js` — target-tab selection, stale-tab ungrouping, and collapsing.
 - `actions.js` — the top-level actions (`groupTabs`, `sortTabs`, `closeDuplicateTabs`, `getPreviewTabs`).
 
