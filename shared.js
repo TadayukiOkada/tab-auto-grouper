@@ -1,8 +1,8 @@
 // Barrel module: re-exports the public API from the refactored src/ modules.
 //
-// This preserves the original single-entry import surface so background.js,
-// options.js, and popup.js can import from "./shared.js" as before. New code
-// may import directly from the specific src/ modules instead.
+// This gives callers a single stable import surface; options.js imports from
+// "./shared.js". background.js and popup.js (and new code) may import directly
+// from the specific src/ modules instead.
 
 export {
   STORAGE_KEY,

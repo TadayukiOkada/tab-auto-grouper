@@ -219,6 +219,10 @@ export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
  */
 export async function closeDuplicateTabs(windowId) {
   const options = await getOptions();
+  if (options.closeDuplicateScope === "activeWindow" && windowId == null) {
+    // Without a window to scope to, queryTabs would span every window.
+    return { closed: 0 };
+  }
   const scopeWindowId = options.closeDuplicateScope === "activeWindow" ? windowId : undefined;
   const tabs = await queryTabs(scopeWindowId);
 
@@ -265,6 +269,9 @@ export async function closeDuplicateTabs(windowId) {
  */
 export async function getPreviewTabs(windowId) {
   const options = await getOptions();
+  if (options.activeWindowOnly && windowId == null) {
+    return { total: 0, matched: 0, skippedPinned: 0, counts: [] };
+  }
   const scopeWindowId = options.activeWindowOnly ? windowId : undefined;
   const allTabs = await queryTabs(scopeWindowId);
   const tabs = allTabs.filter((tab) => !(options.skipPinnedTabs && tab.pinned));
@@ -272,12 +279,14 @@ export async function getPreviewTabs(windowId) {
 
   const counts = new Map();
   let matched = 0;
+  let unmatched = 0;
   for (const tab of tabs) {
     const rule = classifyTab(tab, options.rules);
-    const name = rule ? rule.name : "Ungrouped";
-    counts.set(name, (counts.get(name) || 0) + 1);
     if (rule) {
+      counts.set(rule.name, (counts.get(rule.name) || 0) + 1);
       matched += 1;
+    } else {
+      unmatched += 1;
     }
   }
 
@@ -285,12 +294,13 @@ export async function getPreviewTabs(windowId) {
     total: tabs.length,
     matched,
     skippedPinned,
-    counts: [...counts.entries()]
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => {
-        if (a.name === "Ungrouped") return 1;
-        if (b.name === "Ungrouped") return -1;
-        return a.name.localeCompare(b.name);
-      })
+    // The unmatched bucket is flagged rather than named, so a user rule
+    // called "Ungrouped" can't collide with it.
+    counts: [
+      ...[...counts.entries()]
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+      ...(unmatched ? [{ name: "Ungrouped", count: unmatched, unmatched: true }] : [])
+    ]
   };
 }

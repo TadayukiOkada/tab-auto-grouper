@@ -56,13 +56,14 @@ export function mergeOptions(stored) {
   const rules = Array.isArray(stored.rules)
     ? stored.rules.filter(isPlainObject).map(normalizeRule)
     : base.rules;
+  // Catch-all rules always sort/pack last (an import can place one mid-array).
+  rules.sort((a, b) => Boolean(a.catchAll) - Boolean(b.catchAll));
 
   const merged = {
     schemaVersion: SCHEMA_VERSION,
     rules,
     activeWindowOnly: Boolean(stored.activeWindowOnly ?? base.activeWindowOnly),
-    // Pre-schema-v2 data had no collapseGroups; default it on.
-    collapseGroups: stored.schemaVersion ? Boolean(stored.collapseGroups) : true,
+    collapseGroups: Boolean(stored.collapseGroups ?? base.collapseGroups),
     closeDuplicateScope: oneOf(stored.closeDuplicateScope, ENUMS.DUPLICATE_SCOPES, base.closeDuplicateScope),
     duplicateMatch: oneOf(stored.duplicateMatch, ENUMS.DUPLICATE_MATCH_MODES, base.duplicateMatch),
     skipPinnedTabs: Boolean(stored.skipPinnedTabs ?? base.skipPinnedTabs),
