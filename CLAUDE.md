@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Tab Auto Grouper is a Manifest V3 browser extension (vanilla JS, ES modules, no bundler, no build step, no package.json, no test framework) that runs on both Chrome and Firefox (138+, for WebExtensions `tabGroups` support) from one source tree. Loading it on Chrome is `chrome://extensions` → Developer mode → Load unpacked → select this folder (root `manifest.json`); on Firefox it's `./build-firefox.sh` then `about:debugging#/runtime/this-firefox` → Load Temporary Add-on → select `firefox-build/manifest.json` (or `web-ext run --source-dir=firefox-build` if `web-ext` is installed).
+Tab Auto Grouper is a Manifest V3 browser extension (vanilla JS, ES modules, no bundler, no build step, no package.json, no test framework) that runs on both Chrome and Firefox (140+, for `tabGroups` support and the `data_collection_permissions` manifest key) from one source tree. Loading it on Chrome is `chrome://extensions` → Developer mode → Load unpacked → select this folder (root `manifest.json`); on Firefox it's `./build-firefox.sh` then `about:debugging#/runtime/this-firefox` → Load Temporary Add-on → select `firefox-build/manifest.json` (or `web-ext run --source-dir=firefox-build` if `web-ext` is installed).
 
 ## Workflow (no build/test commands exist)
 
@@ -20,7 +20,7 @@ Tab Auto Grouper is a Manifest V3 browser extension (vanilla JS, ES modules, no 
 Chrome hard-rejects a Manifest V3 manifest that declares `background.scripts` at all ("'background.scripts' requires manifest version of 2 or lower"), and Firefox's temporary-add-on loader requires a literal `manifest.json` file in the directory you point it at — so one shared manifest.json isn't possible. Symlinking a `firefox/` subdirectory back to the root source files doesn't work either: both Chrome and Firefox refuse to follow symlinks that resolve outside the loaded extension directory (a deliberate sandbox-escape protection), so a symlinked `popup.html` etc. silently fails to load — this was tried and reverted after it produced a Firefox toolbar icon with no popup. Instead:
 
 - Root `manifest.json` — Chrome's manifest (`background.service_worker`), used directly from the repo root.
-- Root `manifest.firefox.json` — Firefox's manifest (`background.scripts` as a non-persistent event page, plus `browser_specific_settings.gecko` pinning `strict_min_version` to the first Firefox release with full `tabGroups`/`tabs.group()` support). It is never loaded directly.
+- Root `manifest.firefox.json` — Firefox's manifest (`background.scripts` as a non-persistent event page, plus `browser_specific_settings.gecko` pinning `strict_min_version` to 140 — the first release supporting both `tabGroups` (139) and `data_collection_permissions` (140) — and `gecko_android.strict_min_version` to 142, where the latter arrived; AMO warns if either is lower). It is never loaded directly.
 - `build-firefox.sh` — a plain-`cp` shell script (no dependencies) that copies `background.js`, `popup.*`, `options.*`, `shared.js`, `src/`, `icons/`, and `manifest.firefox.json` (renamed to `manifest.json`) into a fresh, gitignored `firefox-build/` directory. That directory, not the repo root, is what you point Firefox at. Re-run it after any edit to a shared source file before reloading in Firefox — it's a real-file copy each time, so there's no drift to worry about as long as you always re-run it rather than hand-editing inside `firefox-build/`.
 
 ## Architecture

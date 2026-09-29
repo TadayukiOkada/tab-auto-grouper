@@ -1,6 +1,6 @@
 # Tab Auto Grouper
 
-A small Manifest V3 extension that groups tabs by local rules. Works on both Chrome and Firefox (138+) from the same source.
+A small Manifest V3 extension that groups tabs by local rules. Works on both Chrome and Firefox (140+) from the same source.
 
 ## Features
 
@@ -23,7 +23,7 @@ A small Manifest V3 extension that groups tabs by local rules. Works on both Chr
 3. Click `Load unpacked`.
 4. Select this `tab-auto-grouper` folder.
 
-**Firefox** (138 or later — earlier versions lack the `tabGroups` WebExtensions API):
+**Firefox** (140 or later — earlier versions lack the `tabGroups` WebExtensions API or the `data_collection_permissions` manifest key):
 
 1. Run `./build-firefox.sh` from this folder. Chrome and Firefox need different `manifest.json` background declarations and Firefox won't follow symlinks back to shared files, so this script copies the shared source into a `firefox-build/` folder together with `manifest.firefox.json` (renamed to `manifest.json`) — re-run it any time you change a source file.
 2. Open `about:debugging#/runtime/this-firefox`.
