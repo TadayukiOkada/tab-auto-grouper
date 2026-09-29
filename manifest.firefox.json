@@ -42,7 +42,7 @@
   },
   "browser_specific_settings": {
     "gecko": {
-      "id": "tab-auto-grouper@tokada.dev",
+      "id": "tokada.dev@gmail.com",
       "strict_min_version": "138.0",
       "data_collection_permissions": {
         "required": ["none"]
