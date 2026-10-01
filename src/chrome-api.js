@@ -172,8 +172,36 @@ function sanitizeTabIds(tabIds) {
 }
 
 /**
- * Add tabs to an existing group. If Chrome rejects moving already-grouped tabs
- * directly, ungroup them, let the strip settle, and retry once.
+ * Run a group() call that can transiently fail while the tab strip is
+ * mid-rearrangement. Retries once after a short settle, and only as a last
+ * resort ungroups the tabs (which churns the strip) before a final attempt.
+ * @returns {Promise<number | null>} group id from the successful call, or null
+ */
+async function groupWithRetry(params, ids, label) {
+  const attempt = () => extensionApi.tabs.group(params);
+  try {
+    return await attempt();
+  } catch (firstErr) {
+    debug(`${label} rejected, retrying`, ids, firstErr?.message);
+  }
+  await sleep(80);
+  try {
+    return await attempt();
+  } catch (secondErr) {
+    debug(`${label} rejected again, retrying after ungroup`, ids, secondErr?.message);
+  }
+  await ungroupTabs(ids);
+  await sleep(80);
+  try {
+    return await attempt();
+  } catch (finalErr) {
+    error(`${label} failed after retries`, ids, finalErr);
+    return null;
+  }
+}
+
+/**
+ * Add tabs to an existing group.
  * @returns {Promise<{ added: number, failed: number }>}
  */
 export async function addTabsToGroup(groupId, tabIds) {
@@ -181,25 +209,12 @@ export async function addTabsToGroup(groupId, tabIds) {
   if (ids.length === 0) {
     return { added: 0, failed: 0 };
   }
-  try {
-    await extensionApi.tabs.group({ groupId, tabIds: ids });
-    return { added: ids.length, failed: 0 };
-  } catch (firstErr) {
-    debug("group() rejected, retrying after ungroup", groupId, ids, firstErr?.message);
-    await ungroupTabs(ids);
-    await sleep(80);
-    try {
-      await extensionApi.tabs.group({ groupId, tabIds: ids });
-      return { added: ids.length, failed: 0 };
-    } catch (secondErr) {
-      error("addTabsToGroup failed after retry", groupId, ids, secondErr);
-      return { added: 0, failed: ids.length };
-    }
-  }
+  const result = await groupWithRetry({ groupId, tabIds: ids }, ids, "group()");
+  return result == null ? { added: 0, failed: ids.length } : { added: ids.length, failed: 0 };
 }
 
 /**
- * Create a new group in a window from the given tabs, with one retry.
+ * Create a new group in a window from the given tabs, with retries.
  * @returns {Promise<number | null>} new group id, or null on failure
  */
 export async function createGroup(windowId, tabIds) {
@@ -207,17 +222,5 @@ export async function createGroup(windowId, tabIds) {
   if (ids.length === 0) {
     return null;
   }
-  try {
-    return await extensionApi.tabs.group({ tabIds: ids, createProperties: { windowId } });
-  } catch (firstErr) {
-    debug("create group() rejected, retrying after ungroup", windowId, ids, firstErr?.message);
-    await ungroupTabs(ids);
-    await sleep(80);
-    try {
-      return await extensionApi.tabs.group({ tabIds: ids, createProperties: { windowId } });
-    } catch (secondErr) {
-      error("createGroup failed after retry", windowId, ids, secondErr);
-      return null;
-    }
-  }
+  return groupWithRetry({ tabIds: ids, createProperties: { windowId } }, ids, "create group()");
 }

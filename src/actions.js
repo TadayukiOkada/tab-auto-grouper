@@ -41,13 +41,16 @@ export async function groupTabs(windowId) {
   debug("groupTabs start", { windowId, activeWindowOnly: options.activeWindowOnly });
 
   const stale = await ungroupStaleTabs(options, windowId);
-  let tabs = await getTargetTabs(options, windowId);
 
   const preMerge = await mergeDuplicateGroups({
     rules: options.rules,
     activeWindowOnly: options.activeWindowOnly,
     windowId
   });
+
+  // Read the tabs after the merge so each tab's groupId is current. Buckets
+  // hold disjoint tabs, so one bucket's grouping can't change another's.
+  const tabs = await getTargetTabs(options, windowId);
 
   // Bucket tabs by (window, rule).
   const buckets = new Map();
@@ -78,19 +81,19 @@ export async function groupTabs(windowId) {
         continue;
       }
     } else {
-      const fresh = await queryTabs(bucket.windowId);
-      const freshById = new Map(fresh.map((tab) => [tab.id, tab]));
-      const idsToAdd = tabIds.filter((id) => freshById.get(id)?.groupId !== target.id);
+      const idsToAdd = bucket.tabs.filter((tab) => tab.groupId !== target.id).map((tab) => tab.id);
       const result = await addTabsToGroup(target.id, idsToAdd);
       failedGroupTabs += result.failed;
       bucketFailed = result.failed;
     }
 
-    await updateGroup(target.id, {
-      title: bucket.rule.name,
-      color: bucket.rule.color || "grey",
-      collapsed: Boolean(options.collapseGroups)
-    });
+    // Don't collapse here: the sort step below still moves tabs inside these
+    // groups. collapseManagedGroups collapses them once, after all moves.
+    const groupProps = { title: bucket.rule.name, color: bucket.rule.color || "grey" };
+    if (!options.collapseGroups) {
+      groupProps.collapsed = false;
+    }
+    await updateGroup(target.id, groupProps);
     groupedTabCount += bucket.tabs.length - bucketFailed;
   }
 
@@ -105,7 +108,8 @@ export async function groupTabs(windowId) {
   // run the full sort (which also orders ungrouped tabs); otherwise just pack.
   let sortResult = { moved: 0, groupsMoved: 0, failedGroupMoves: 0 };
   if (options.sortAfterGrouping) {
-    sortResult = await sortTabs({ activeWindowOnly: options.activeWindowOnly, windowId });
+    // Duplicates were just merged above, so skip the sort's own merge pass.
+    sortResult = await sortTabs({ activeWindowOnly: options.activeWindowOnly, windowId, mergeDuplicates: false });
   } else {
     const pack = await packGroups({
       rules: options.rules,
@@ -137,9 +141,9 @@ export async function groupTabs(windowId) {
 /**
  * Sort tabs: pack groups to the configured side, then order both ungrouped
  * tabs and the tabs inside each group using the configured tab sort method.
- * @param {{ activeWindowOnly?: boolean, windowId?: number }} params
+ * @param {{ activeWindowOnly?: boolean, windowId?: number, mergeDuplicates?: boolean }} params
  */
-export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
+export async function sortTabs({ activeWindowOnly = true, windowId, mergeDuplicates = true } = {}) {
   const options = await getOptions();
   const toLeft = options.groupPosition === "left";
   const compareTabs = getTabComparator(options.rules, options.tabSortMethod);
@@ -150,7 +154,9 @@ export async function sortTabs({ activeWindowOnly = true, windowId } = {}) {
     tabSortMethod: options.tabSortMethod
   });
 
-  const merge = await mergeDuplicateGroups({ rules: options.rules, activeWindowOnly, windowId });
+  const merge = mergeDuplicates
+    ? await mergeDuplicateGroups({ rules: options.rules, activeWindowOnly, windowId })
+    : { merged: 0, failed: 0 };
   const pack = await packGroups({
     rules: options.rules,
     groupPosition: options.groupPosition,

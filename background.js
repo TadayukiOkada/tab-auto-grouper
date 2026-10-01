@@ -15,14 +15,44 @@ globalThis.TabAutoGrouper = {
 // Serialize all tab/group-mutating actions through one queue so a popup
 // click and the keyboard shortcut firing around the same time can't
 // interleave their tabs.move/tabs.group calls against each other.
+//
+// An identical request (same type and payload) that is still waiting in the
+// queue is coalesced: callers share the queued run instead of stacking
+// another full pass (e.g. the shortcut pressed repeatedly). Once a run has
+// started it no longer absorbs new requests, since the tab strip may have
+// changed after it read it.
+//
+// A run that hangs (e.g. a browser API call that never settles) would block
+// every later action, so each run is abandoned after ACTION_TIMEOUT_MS. The
+// hung call isn't cancelled, but the queue and its caller move on.
+const ACTION_TIMEOUT_MS = 120_000;
 let actionQueue = Promise.resolve();
-function serialize(fn) {
-  const result = actionQueue.then(fn, fn);
+const queuedByKey = new Map();
+function serialize(key, fn) {
+  const queued = queuedByKey.get(key);
+  if (queued) {
+    debug("coalesced queued action", key);
+    return queued;
+  }
+  const run = () => {
+    queuedByKey.delete(key);
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error("Action timed out")), ACTION_TIMEOUT_MS);
+    });
+    return Promise.race([fn(), timeout]).finally(() => clearTimeout(timer));
+  };
+  const result = actionQueue.then(run, run);
+  queuedByKey.set(key, result);
   actionQueue = result.then(
     () => {},
     () => {}
   );
   return result;
+}
+
+function enqueueAction(type, payload) {
+  return serialize(`${type}:${JSON.stringify(payload ?? null)}`, () => runAction(type, payload));
 }
 
 /**
@@ -46,7 +76,7 @@ async function runAction(type, payload) {
 }
 
 extensionApi.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  serialize(() => runAction(message.type, message.payload))
+  enqueueAction(message.type, message.payload)
     .then((result) => sendResponse({ ok: true, result }))
     .catch((err) => {
       error("action failed", message?.type, err);
@@ -60,6 +90,6 @@ extensionApi.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 extensionApi.commands.onCommand.addListener((command, tab) => {
   if (command === "group-tabs") {
     debug("keyboard command group-tabs", { windowId: tab?.windowId });
-    serialize(() => groupTabs(tab?.windowId)).catch((err) => error("keyboard group-tabs failed", err));
+    enqueueAction("groupTabs", { windowId: tab?.windowId }).catch((err) => error("keyboard group-tabs failed", err));
   }
 });

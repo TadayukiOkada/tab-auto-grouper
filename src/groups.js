@@ -5,6 +5,7 @@
 
 import { normalizeGroupTitle } from "./url-utils.js";
 import {
+  NO_GROUP,
   queryTabs,
   queryGroups,
   queryGroupTabs,
@@ -159,6 +160,43 @@ function orderGroupsByRule(groups, ruleOrder, ruleCount, includeAllGroups) {
 }
 
 /**
+ * Whether the non-empty groups in `ordered` already sit as one contiguous
+ * block in that exact order, starting right after the pinned tabs (left) or
+ * ending at the last tab of the window (right).
+ * @param {Array<chrome.tabGroups.TabGroup>} ordered
+ * @param {chrome.tabs.Tab[]} tabs all tabs in the window
+ * @param {number} pinnedCount
+ * @param {boolean} toLeft
+ * @returns {boolean}
+ */
+function isAlreadyPacked(ordered, tabs, pinnedCount, toLeft) {
+  const infoById = new Map();
+  for (const tab of tabs) {
+    if (tab.groupId === NO_GROUP) {
+      continue;
+    }
+    const info = infoById.get(tab.groupId);
+    if (info) {
+      info.start = Math.min(info.start, tab.index);
+      info.size += 1;
+    } else {
+      infoById.set(tab.groupId, { start: tab.index, size: 1 });
+    }
+  }
+
+  const placed = ordered.map((group) => infoById.get(group.id)).filter(Boolean);
+  const blockSize = placed.reduce((sum, info) => sum + info.size, 0);
+  let expectedStart = toLeft ? pinnedCount : tabs.length - blockSize;
+  for (const info of placed) {
+    if (info.start !== expectedStart) {
+      return false;
+    }
+    expectedStart += info.size;
+  }
+  return true;
+}
+
+/**
  * Pack all groups to one side of the tab strip, in rule order.
  *
  * Both directions avoid computing a running numeric cursor from group sizes
@@ -188,6 +226,12 @@ export async function packGroups({ rules, groupPosition, activeWindowOnly, windo
     const ordered = orderGroupsByRule(groups, ruleOrder, rules.length, includeAllGroups);
 
     if (ordered.length === 0) {
+      continue;
+    }
+    // Each tabGroups.move physically moves every tab in the group, so skip
+    // the whole window when it's already laid out the way we'd leave it.
+    if (isAlreadyPacked(ordered, tabs, pinnedCount, toLeft)) {
+      debug("packGroups: already packed", { windowId: wid });
       continue;
     }
 
