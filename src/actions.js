@@ -7,9 +7,8 @@ import { normalizeGroupTitle, normalizeDuplicateUrl, getTabUrl } from "./url-uti
 import {
   NO_GROUP,
   queryTabs,
-  queryGroups,
+  queryScopedTabs,
   getGroup,
-  getGroupTabInfo,
   updateGroup,
   moveTab,
   removeTabs,
@@ -89,11 +88,12 @@ export async function groupTabs(windowId) {
 
     // Don't collapse here: the sort step below still moves tabs inside these
     // groups. collapseManagedGroups collapses them once, after all moves.
-    const groupProps = { title: bucket.rule.name, color: bucket.rule.color || "grey" };
-    if (!options.collapseGroups) {
-      groupProps.collapsed = false;
-    }
-    await updateGroup(target.id, groupProps);
+    // Leave collapsed state untouched when collapseGroups is off so manually
+    // collapsed groups aren't force-expanded on every run.
+    await updateGroup(target.id, {
+      title: bucket.rule.name,
+      color: bucket.rule.color || "grey"
+    });
     groupedTabCount += bucket.tabs.length - bucketFailed;
   }
 
@@ -173,22 +173,32 @@ export async function sortTabs({ activeWindowOnly = true, windowId, mergeDuplica
     const pinnedCount = tabs.filter((tab) => tab.pinned).length;
 
     // When groups are on the left, ungrouped tabs start after the group block.
-    let groupTabCount = 0;
-    if (toLeft) {
-      for (const group of await queryGroups(wid)) {
-        groupTabCount += (await getGroupTabInfo(wid, group.id)).size;
-      }
-    }
+    const groupTabCount = toLeft
+      ? tabs.filter((tab) => !tab.pinned && tab.groupId !== NO_GROUP).length
+      : 0;
     const ungroupedStart = toLeft ? pinnedCount + groupTabCount : pinnedCount;
 
-    const ungrouped = tabs
+    // `current` mirrors the live order of this band of the tab strip (by
+    // current index) so each move is checked against where a tab actually is,
+    // not its pre-sort snapshot index (which earlier moves can shift).
+    const current = tabs
       .filter((tab) => !tab.pinned && tab.groupId === NO_GROUP)
-      .sort(compareTabs);
+      .sort((a, b) => a.index - b.index);
 
-    // `current` mirrors the live order of this band of the tab strip so each
-    // move is checked against where a tab actually is, not its pre-sort
-    // snapshot index (which earlier moves in this loop can shift).
-    const current = [...ungrouped];
+    // Target indices below assume the group block is cleanly packed, so the
+    // ungrouped tabs occupy exactly [ungroupedStart, ungroupedStart + n). If a
+    // group move failed and a group still sits among the ungrouped tabs, a
+    // computed target could land inside that group's range and the browser
+    // would add the moved tab to it — so skip sorting this window's ungrouped
+    // tabs instead.
+    const contiguous = current.every((tab, i) => tab.index === ungroupedStart + i);
+    if (!contiguous) {
+      debug("sortTabs: ungrouped tabs not contiguous, skipping window", { windowId: wid });
+      continue;
+    }
+
+    const ungrouped = [...current].sort(compareTabs);
+
     for (let offset = 0; offset < ungrouped.length; offset += 1) {
       const tab = ungrouped[offset];
       const targetIndex = ungroupedStart + offset;
@@ -225,12 +235,10 @@ export async function sortTabs({ activeWindowOnly = true, windowId, mergeDuplica
  */
 export async function closeDuplicateTabs(windowId) {
   const options = await getOptions();
-  if (options.closeDuplicateScope === "activeWindow" && windowId == null) {
-    // Without a window to scope to, queryTabs would span every window.
+  const tabs = await queryScopedTabs(options.closeDuplicateScope === "activeWindow", windowId);
+  if (tabs.length === 0) {
     return { closed: 0 };
   }
-  const scopeWindowId = options.closeDuplicateScope === "activeWindow" ? windowId : undefined;
-  const tabs = await queryTabs(scopeWindowId);
 
   const ranked = [...tabs].sort((a, b) => {
     if (options.skipPinnedTabs && a.pinned !== b.pinned) {
@@ -275,11 +283,10 @@ export async function closeDuplicateTabs(windowId) {
  */
 export async function getPreviewTabs(windowId) {
   const options = await getOptions();
-  if (options.activeWindowOnly && windowId == null) {
+  const allTabs = await queryScopedTabs(options.activeWindowOnly, windowId);
+  if (allTabs.length === 0) {
     return { total: 0, matched: 0, skippedPinned: 0, counts: [] };
   }
-  const scopeWindowId = options.activeWindowOnly ? windowId : undefined;
-  const allTabs = await queryTabs(scopeWindowId);
   const tabs = allTabs.filter((tab) => !(options.skipPinnedTabs && tab.pinned));
   const skippedPinned = allTabs.length - tabs.length;
 

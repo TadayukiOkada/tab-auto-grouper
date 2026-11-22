@@ -71,6 +71,9 @@ export function validateRule(rule, index) {
       throw new ValidationError(`Rule "${rule.name}" field "${field}" must be an array.`);
     }
   }
+  if (rule.catchAll !== undefined && typeof rule.catchAll !== "boolean") {
+    throw new ValidationError(`Rule "${rule.name}" field "catchAll" must be a boolean.`);
+  }
   // A rule that matches nothing is almost certainly a mistake worth flagging
   // — unless it's an intentional catch-all for "everything else".
   const hasCriteria =
@@ -129,3 +132,36 @@ export const ENUMS = Object.freeze({
   DUPLICATE_SCOPES,
   TAB_SORT_METHODS
 });
+
+const BOOLEAN_OPTION_FIELDS = [
+  "activeWindowOnly",
+  "collapseGroups",
+  "skipPinnedTabs",
+  "sortAfterGrouping"
+];
+
+const ENUM_OPTION_FIELDS = [
+  ["closeDuplicateScope", DUPLICATE_SCOPES],
+  ["duplicateMatch", DUPLICATE_MATCH_MODES],
+  ["groupPosition", GROUP_POSITIONS],
+  ["tabSortMethod", TAB_SORT_METHODS]
+];
+
+/**
+ * Validate non-rule option fields when present, throwing ValidationError on
+ * wrong types or unknown enum values instead of silently coercing on import.
+ * Missing fields are allowed so partial/older backups still import cleanly.
+ * @param {Record<string, unknown>} options
+ */
+export function validateOptions(options) {
+  for (const field of BOOLEAN_OPTION_FIELDS) {
+    if (options[field] !== undefined && typeof options[field] !== "boolean") {
+      throw new ValidationError(`Setting "${field}" must be a boolean.`);
+    }
+  }
+  for (const [field, allowed] of ENUM_OPTION_FIELDS) {
+    if (options[field] !== undefined && !allowed.includes(options[field])) {
+      throw new ValidationError(`Setting "${field}" has an invalid value "${options[field]}".`);
+    }
+  }
+}

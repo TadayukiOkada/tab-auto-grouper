@@ -12,6 +12,7 @@ import {
   isPlainObject,
   toStringArray,
   validateRules,
+  validateOptions,
   oneOf,
   ENUMS,
   ValidationError
@@ -35,7 +36,7 @@ function normalizeRule(rule) {
     domains: toStringArray(rule.domains),
     urlIncludes: toStringArray(rule.urlIncludes),
     titleKeywords: toStringArray(rule.titleKeywords),
-    catchAll: Boolean(rule.catchAll)
+    catchAll: rule.catchAll === true
   };
 }
 
@@ -62,12 +63,12 @@ export function mergeOptions(stored) {
   const merged = {
     schemaVersion: SCHEMA_VERSION,
     rules,
-    activeWindowOnly: Boolean(stored.activeWindowOnly ?? base.activeWindowOnly),
-    collapseGroups: Boolean(stored.collapseGroups ?? base.collapseGroups),
+    activeWindowOnly: typeof stored.activeWindowOnly === "boolean" ? stored.activeWindowOnly : base.activeWindowOnly,
+    collapseGroups: typeof stored.collapseGroups === "boolean" ? stored.collapseGroups : base.collapseGroups,
     closeDuplicateScope: oneOf(stored.closeDuplicateScope, ENUMS.DUPLICATE_SCOPES, base.closeDuplicateScope),
     duplicateMatch: oneOf(stored.duplicateMatch, ENUMS.DUPLICATE_MATCH_MODES, base.duplicateMatch),
-    skipPinnedTabs: Boolean(stored.skipPinnedTabs ?? base.skipPinnedTabs),
-    sortAfterGrouping: Boolean(stored.sortAfterGrouping ?? base.sortAfterGrouping),
+    skipPinnedTabs: typeof stored.skipPinnedTabs === "boolean" ? stored.skipPinnedTabs : base.skipPinnedTabs,
+    sortAfterGrouping: typeof stored.sortAfterGrouping === "boolean" ? stored.sortAfterGrouping : base.sortAfterGrouping,
     groupPosition: oneOf(stored.groupPosition, ENUMS.GROUP_POSITIONS, base.groupPosition),
     tabSortMethod: oneOf(stored.tabSortMethod, ENUMS.TAB_SORT_METHODS, base.tabSortMethod)
   };
@@ -120,6 +121,7 @@ export async function saveOptions(options) {
     throw new ValidationError('Settings must include a "rules" array.');
   }
   validateRules(options.rules);
+  validateOptions(options);
   const normalized = mergeOptions(options);
 
   const payload = JSON.stringify({ [STORAGE_KEY]: normalized });

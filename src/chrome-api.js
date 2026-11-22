@@ -36,7 +36,18 @@ export async function getAllNormalWindowIds() {
  */
 export async function resolveWindowIds(activeWindowOnly, windowId) {
   if (activeWindowOnly) {
-    return windowId != null ? [windowId] : [];
+    if (windowId == null) {
+      return [];
+    }
+    // Tab groups only exist in normal windows; ignore popup/app/devtools
+    // windows (e.g. the keyboard shortcut fired from one), matching the
+    // all-windows path below.
+    try {
+      const win = await extensionApi.windows.get(windowId);
+      return win?.type === "normal" ? [windowId] : [];
+    } catch {
+      return [];
+    }
   }
   return getAllNormalWindowIds();
 }
@@ -57,6 +68,46 @@ export async function queryTabs(windowId) {
  */
 export async function queryGroups(windowId) {
   return extensionApi.tabGroups.query(windowId != null ? { windowId } : {});
+}
+
+/**
+ * Query tabs scoped either to a specific window (when activeWindowOnly is true)
+ * or across all normal windows (ignoring popup/app/devtools windows).
+ * @param {boolean} activeWindowOnly
+ * @param {number|undefined} windowId
+ * @returns {Promise<chrome.tabs.Tab[]>}
+ */
+export async function queryScopedTabs(activeWindowOnly, windowId) {
+  const windowIds = await resolveWindowIds(activeWindowOnly, windowId);
+  if (windowIds.length === 0) {
+    return [];
+  }
+  if (activeWindowOnly) {
+    return queryTabs(windowIds[0]);
+  }
+  const allowed = new Set(windowIds);
+  const allTabs = await queryTabs(undefined);
+  return allTabs.filter((tab) => allowed.has(tab.windowId));
+}
+
+/**
+ * Query tab groups scoped either to a specific window (when activeWindowOnly
+ * is true) or across all normal windows.
+ * @param {boolean} activeWindowOnly
+ * @param {number|undefined} windowId
+ * @returns {Promise<chrome.tabGroups.TabGroup[]>}
+ */
+export async function queryScopedGroups(activeWindowOnly, windowId) {
+  const windowIds = await resolveWindowIds(activeWindowOnly, windowId);
+  if (windowIds.length === 0) {
+    return [];
+  }
+  if (activeWindowOnly) {
+    return queryGroups(windowIds[0]);
+  }
+  const allowed = new Set(windowIds);
+  const allGroups = await queryGroups(undefined);
+  return allGroups.filter((group) => allowed.has(group.windowId));
 }
 
 /**
