@@ -10,7 +10,7 @@ A small Manifest V3 extension that groups tabs by local rules. Works on both Chr
 - Close duplicate tabs.
 - Sort tabs: ungrouped tabs and tab groups are arranged left-to-right; tab groups can be pinned to either the left or right side (see Options below).
 - Edit rules with a field-based editor on the options page (name, color, domains, URL substrings, title keywords, with reordering).
-- Optional catch-all group for every tab that doesn't match any rule (off by default). When sorting, the catch-all group is always placed last.
+- Optional catch-all group for web (`http`/`https`) tabs that don't match any rule (off by default). When sorting, the catch-all group is placed after all other rule-based groups.
 - Export all settings to a JSON file and import them back.
 - Everything runs locally. No network calls are made.
 
@@ -51,13 +51,18 @@ The options page has a `Behavior` section with these settings:
 - **Group only the active window** — limit `Group tabs`, its automatic sort-after-grouping step, and the popup's match preview to the current window instead of all windows. `Sort active window` (the standalone button) always scopes to the active window regardless of this setting.
 - **Collapse groups after creating them**.
 - **Sort tabs after grouping** — run the sort step automatically whenever `Group tabs` runs.
-- **Leave pinned tabs untouched** — when off, pinned tabs matching a rule are grouped like any other tab; the browser unpins them to do so.
+- **Leave pinned tabs untouched** — when off, pinned tabs matching a rule are grouped like any other tab; the browser unpins them to do so. When on, `Close duplicates` also keeps pinned tabs and never closes them.
 - **Group position when sorting** — `Left side` (default) packs tab groups right after any pinned tabs, in rule order, with ungrouped tabs following after them. `Right side` places all tab groups at the right end of the tab strip instead, with ungrouped tabs on the left. Groups you created yourself (not backed by a rule) are packed too, after all rule-based groups, in alphabetical order by title.
 - **Tab sort method** — how tabs are ordered by `Sort active window` and by "sort after grouping", both within each group and among ungrouped tabs:
   - `Rule, then domain, then title` (default) — the original behavior: tabs cluster by matching rule, then by domain, then by title.
   - `Domain, then subdomain, then path` — clusters tabs by domain first (so `docs.example.com` and `mail.example.com` sort together), then by subdomain, then by the URL's path/query/fragment.
   - `Most recently used first` — most recently active tabs first.
   - `Title (A-Z)` — alphabetical by tab title.
+
+The `Duplicate Tabs` section controls how `Close duplicates` behaves:
+
+- **Scope** — `All windows` (default) or `Active window only`.
+- **Match** — `Same URL, ignoring #fragment` (default), `Exact URL`, or `Same page, ignoring query and #fragment`.
 
 ## Rules
 
@@ -71,7 +76,7 @@ Rules are evaluated from top to bottom and edited on the options page. Each rule
 
 ### Catch-all group
 
-At the top of the `Rules` section, `Group all other tabs` (off by default) adds an optional catch-all group for tabs that don't match any rule. When enabled, you can set its name (default `Others`) and color. Any tab not matched by a rule is placed into this group, and when sorting it is always placed after all other groups.
+At the top of the `Rules` section, `Group all other tabs` (off by default) adds an optional catch-all group for web (`http`/`https`) tabs that don't match any rule (non-web tabs such as `chrome://` or `about:` are skipped). When enabled, you can set its name (default `Others`) and color. When sorting, the catch-all group is placed after all other rule-based groups (before any manually created groups).
 
 ## Backup
 
@@ -96,7 +101,7 @@ The extension logic is split into focused ES modules under `src/`:
 
 `shared.js` is a thin barrel that re-exports the public API for callers that want a single import surface — `options.js` uses it. `background.js` and `popup.js` import directly from the specific `src/` modules they need instead.
 
-All actions receive an explicit `windowId` (resolved by the popup, which has a real associated window) rather than calling `windows.getCurrent()` from the background script, which cannot reliably resolve the active window there.
+All actions receive an explicit `windowId` (resolved by the popup, which has a real associated window, or supplied by the `commands` listener for the keyboard shortcut) rather than calling `windows.getCurrent()` from the background script, which cannot reliably resolve the active window there.
 
 `manifest.firefox.json` is Firefox's own manifest (Chrome and Firefox can't share one — see Install above); `build-firefox.sh` assembles it with a copy of the shared source into the gitignored `firefox-build/` folder that Firefox actually loads.
 
