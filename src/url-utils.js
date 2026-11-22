@@ -138,6 +138,8 @@ export function domainMatches(hostname, domain) {
 /**
  * Produce a canonical key for duplicate detection based on the chosen match
  * mode. Returns null for non-web URLs so they're never treated as duplicates.
+ * "exact" keeps the hostname as-is (including any leading "www."); looser
+ * modes normalize away a leading "www.".
  * @param {string} url
  * @param {"exact"|"withoutHash"|"withoutHashOrQuery"} mode
  * @returns {string | null}
@@ -148,7 +150,9 @@ export function normalizeDuplicateUrl(url, mode) {
     return null;
   }
   parsed.protocol = parsed.protocol.toLowerCase();
-  parsed.hostname = normalizeHost(parsed.hostname);
+  if (mode !== "exact") {
+    parsed.hostname = normalizeHost(parsed.hostname);
+  }
   if (mode === "withoutHash" || mode === "withoutHashOrQuery") {
     parsed.hash = "";
   }

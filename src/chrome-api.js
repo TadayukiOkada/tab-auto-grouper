@@ -60,6 +60,46 @@ export async function queryGroups(windowId) {
 }
 
 /**
+ * Query tabs scoped either to a specific window (when activeWindowOnly is true)
+ * or across all normal windows (ignoring popup/app/devtools windows).
+ * @param {boolean} activeWindowOnly
+ * @param {number|undefined} windowId
+ * @returns {Promise<chrome.tabs.Tab[]>}
+ */
+export async function queryScopedTabs(activeWindowOnly, windowId) {
+  const windowIds = await resolveWindowIds(activeWindowOnly, windowId);
+  if (windowIds.length === 0) {
+    return [];
+  }
+  if (activeWindowOnly) {
+    return queryTabs(windowIds[0]);
+  }
+  const allowed = new Set(windowIds);
+  const allTabs = await queryTabs(undefined);
+  return allTabs.filter((tab) => allowed.has(tab.windowId));
+}
+
+/**
+ * Query tab groups scoped either to a specific window (when activeWindowOnly
+ * is true) or across all normal windows.
+ * @param {boolean} activeWindowOnly
+ * @param {number|undefined} windowId
+ * @returns {Promise<chrome.tabGroups.TabGroup[]>}
+ */
+export async function queryScopedGroups(activeWindowOnly, windowId) {
+  const windowIds = await resolveWindowIds(activeWindowOnly, windowId);
+  if (windowIds.length === 0) {
+    return [];
+  }
+  if (activeWindowOnly) {
+    return queryGroups(windowIds[0]);
+  }
+  const allowed = new Set(windowIds);
+  const allGroups = await queryGroups(undefined);
+  return allGroups.filter((group) => allowed.has(group.windowId));
+}
+
+/**
  * Get a group by id, or null if it no longer exists.
  * @param {number} groupId
  * @returns {Promise<chrome.tabGroups.TabGroup | null>}

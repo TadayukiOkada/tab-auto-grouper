@@ -9,8 +9,8 @@ import { classifyTab } from "./classifier.js";
 import { ruleByTitleMap } from "./groups.js";
 import {
   NO_GROUP,
-  queryTabs,
-  queryGroups,
+  queryScopedTabs,
+  queryScopedGroups,
   getGroup,
   updateGroup,
   collapseGroup,
@@ -19,18 +19,12 @@ import {
 } from "./chrome-api.js";
 
 /**
- * Tabs an action should operate on: those in scope (a window, or all windows),
- * minus pinned tabs when skipPinnedTabs is set.
+ * Tabs an action should operate on: those in scope (a window, or all normal
+ * windows), minus pinned tabs when skipPinnedTabs is set.
  * @returns {Promise<chrome.tabs.Tab[]>}
  */
 export async function getTargetTabs(options, windowId) {
-  if (options.activeWindowOnly && windowId == null) {
-    // No window to scope to — querying unscoped here would fall through to
-    // "all windows", which activeWindowOnly is meant to exclude.
-    return [];
-  }
-  const scopeWindowId = options.activeWindowOnly ? windowId : undefined;
-  const tabs = await queryTabs(scopeWindowId);
+  const tabs = await queryScopedTabs(options.activeWindowOnly, windowId);
   return tabs.filter((tab) => !(options.skipPinnedTabs && tab.pinned));
 }
 
@@ -109,13 +103,7 @@ export async function ungroupStaleTabs(options, windowId) {
  * @returns {Promise<{ collapsed: number }>}
  */
 export async function collapseManagedGroups(options, windowId) {
-  if (options.activeWindowOnly && windowId == null) {
-    // No window to scope to — querying unscoped here would fall through to
-    // "all windows", which activeWindowOnly is meant to exclude.
-    return { collapsed: 0 };
-  }
-  const scopeWindowId = options.activeWindowOnly ? windowId : undefined;
-  const groups = await queryGroups(scopeWindowId);
+  const groups = await queryScopedGroups(options.activeWindowOnly, windowId);
   const ruleNames = new Set(options.rules.map((rule) => normalizeGroupTitle(rule.name)));
   const managed = groups.filter((group) => ruleNames.has(normalizeGroupTitle(group.title)));
   for (const group of managed) {

@@ -76,7 +76,7 @@ async function runAction(type, payload) {
 }
 
 extensionApi.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  enqueueAction(message.type, message.payload)
+  enqueueAction(message?.type, message?.payload)
     .then((result) => sendResponse({ ok: true, result }))
     .catch((err) => {
       error("action failed", message?.type, err);

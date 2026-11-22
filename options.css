@@ -38,7 +38,6 @@ label {
 }
 
 select,
-textarea,
 button {
   border: 1px solid color-mix(in srgb, CanvasText 22%, Canvas);
   border-radius: 8px;
@@ -49,17 +48,6 @@ select {
   background: Canvas;
   color: CanvasText;
   padding: 7px 8px;
-}
-
-textarea {
-  box-sizing: border-box;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 13px;
-  height: 420px;
-  line-height: 1.45;
-  padding: 12px;
-  resize: vertical;
-  width: 100%;
 }
 
 button {
