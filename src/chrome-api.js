@@ -36,7 +36,18 @@ export async function getAllNormalWindowIds() {
  */
 export async function resolveWindowIds(activeWindowOnly, windowId) {
   if (activeWindowOnly) {
-    return windowId != null ? [windowId] : [];
+    if (windowId == null) {
+      return [];
+    }
+    // Tab groups only exist in normal windows; ignore popup/app/devtools
+    // windows (e.g. the keyboard shortcut fired from one), matching the
+    // all-windows path below.
+    try {
+      const win = await extensionApi.windows.get(windowId);
+      return win?.type === "normal" ? [windowId] : [];
+    } catch {
+      return [];
+    }
   }
   return getAllNormalWindowIds();
 }

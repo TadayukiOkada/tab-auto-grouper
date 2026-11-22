@@ -184,6 +184,19 @@ export async function sortTabs({ activeWindowOnly = true, windowId, mergeDuplica
     const current = tabs
       .filter((tab) => !tab.pinned && tab.groupId === NO_GROUP)
       .sort((a, b) => a.index - b.index);
+
+    // Target indices below assume the group block is cleanly packed, so the
+    // ungrouped tabs occupy exactly [ungroupedStart, ungroupedStart + n). If a
+    // group move failed and a group still sits among the ungrouped tabs, a
+    // computed target could land inside that group's range and the browser
+    // would add the moved tab to it — so skip sorting this window's ungrouped
+    // tabs instead.
+    const contiguous = current.every((tab, i) => tab.index === ungroupedStart + i);
+    if (!contiguous) {
+      debug("sortTabs: ungrouped tabs not contiguous, skipping window", { windowId: wid });
+      continue;
+    }
+
     const ungrouped = [...current].sort(compareTabs);
 
     for (let offset = 0; offset < ungrouped.length; offset += 1) {

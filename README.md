@@ -49,7 +49,7 @@ Groups are collapsed by default after grouping. Pinned tabs are skipped by defau
 The options page has a `Behavior` section with these settings:
 
 - **Group only the active window** — limit `Group tabs`, its automatic sort-after-grouping step, and the popup's match preview to the current window instead of all windows. `Sort active window` (the standalone button) always scopes to the active window regardless of this setting.
-- **Collapse groups after creating them**.
+- **Collapse groups after creating them** — when off, the extension leaves each group's collapsed state alone: it doesn't collapse groups, but it doesn't expand them either. Groups collapsed earlier (by hand, or by a run with this setting on) stay collapsed after you turn it off, and tabs added to them stay hidden until you expand the group.
 - **Sort tabs after grouping** — run the sort step automatically whenever `Group tabs` runs.
 - **Leave pinned tabs untouched** — when off, pinned tabs matching a rule are grouped like any other tab; the browser unpins them to do so. When on, `Close duplicates` also keeps pinned tabs and never closes them.
 - **Group position when sorting** — `Left side` (default) packs tab groups right after any pinned tabs, in rule order, with ungrouped tabs following after them. `Right side` places all tab groups at the right end of the tab strip instead, with ungrouped tabs on the left. Groups you created yourself (not backed by a rule) are packed too, after all rule-based groups, in alphabetical order by title.
